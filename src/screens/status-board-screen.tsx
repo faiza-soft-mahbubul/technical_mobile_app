@@ -239,13 +239,10 @@ export function StatusBoardScreen() {
                         pressed && canUpdateStatus ? styles.summaryPressableActive : null,
                       ]}
                     >
-                      <View style={[styles.rowBetween, compact && styles.rowStack]}>
+                      <View style={styles.rowBetween}>
                         <View style={styles.copy}>
                           <Text style={[styles.orderNumber, { color: colors.text }]}>
                             Order #{order.id}
-                          </Text>
-                          <Text style={[styles.companyName, { color: colors.textDim }]}>
-                            {order.companyInfo?.name ?? "Unknown company"}
                           </Text>
                         </View>
                         <View style={styles.statusWrap}>
@@ -253,11 +250,6 @@ export function StatusBoardScreen() {
                             label={formatOrderStatusLabel(order.status)}
                             tone={getStatusTone(order.status)}
                           />
-                          {canUpdateStatus ? (
-                            <Text style={[styles.actionHint, { color: colors.accent }]}>
-                              Tap to update
-                            </Text>
-                          ) : null}
                         </View>
                       </View>
 
@@ -277,7 +269,7 @@ export function StatusBoardScreen() {
                       ) : null}
 
                       <Text style={[styles.subtle, { color: colors.textSoft }]}>
-                        Updated {formatDateTime(order.updatedAt)}
+                        {formatDateTime(order.updatedAt)}
                       </Text>
                     </Pressable>
                   </Surface>
