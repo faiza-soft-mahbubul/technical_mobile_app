@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/common/empty-state";
 import { LoadingState } from "@/components/common/loading-state";
 import { Screen } from "@/components/common/screen";
 import { SearchField } from "@/components/common/search-field";
-import { SectionHeader } from "@/components/common/section-header";
 import { SegmentedControl } from "@/components/common/segmented-control";
 import { Surface } from "@/components/common/surface";
 import { useAuth } from "@/providers/auth-provider";
@@ -68,11 +67,6 @@ export function OrdersScreen() {
       }}
       refreshing={resource.refreshing}
     >
-      <SectionHeader
-        title="Orders"
-        description="Review all created orders, payment state, and service timelines."
-      />
-
       <View style={styles.stack}>
         <SearchField
           placeholder="Search order, company, or client"
@@ -218,7 +212,7 @@ export function OrdersScreen() {
 const styles = StyleSheet.create({
   stack: {
     gap: 14,
-    marginTop: 18,
+    marginTop: 8,
   },
   summary: {
     fontSize: 13,

@@ -18,7 +18,6 @@ import { IconButton } from "@/components/common/icon-button";
 import { LoadingState } from "@/components/common/loading-state";
 import { Screen } from "@/components/common/screen";
 import { SearchField } from "@/components/common/search-field";
-import { SectionHeader } from "@/components/common/section-header";
 import { SegmentedControl } from "@/components/common/segmented-control";
 import { Surface } from "@/components/common/surface";
 import { useAppConfig } from "@/providers/app-config-provider";
@@ -126,11 +125,6 @@ export function StatusBoardScreen() {
       }}
       refreshing={resource.refreshing}
     >
-      <SectionHeader
-        title="Status Board"
-        description="Track pending, processing, and completed technical work with category filtering."
-      />
-
       <View style={styles.stack}>
         <SearchField
           placeholder="Search company, package, or service"
@@ -389,7 +383,7 @@ export function StatusBoardScreen() {
 const styles = StyleSheet.create({
   stack: {
     gap: 14,
-    marginTop: 18,
+    marginTop: 8,
   },
   summary: {
     fontSize: 13,

@@ -1,5 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import {
   ADD_ORDER_FORM_DATA_QUERY,
@@ -124,13 +124,17 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
       (item) => item.isActive && item.countryId === Number(countryId),
     ) ?? [];
   const selectedPackage = packageOptions.find((item) => item.id === Number(packageId)) ?? null;
-  const selectedServices = serviceOptions.filter((item) => selectedServiceIds.includes(item.id));
+  const selectedServices =
+    orderMode === "services"
+      ? serviceOptions.filter((item) => selectedServiceIds.includes(item.id))
+      : [];
   const packageIncludedServices =
     (selectedPackage?.packageServices ?? [])
       .map((item) => item?.service)
       .filter((item): item is NonNullable<typeof item> => Boolean(item)) ?? [];
+  const packageIncludedServiceNames = packageIncludedServices.map((item) => item.name).join(", ");
   const documentServiceOptions = useMemo(() => {
-    const merged = [...(orderMode === "package" ? packageIncludedServices : []), ...selectedServices];
+    const merged = orderMode === "package" ? packageIncludedServices : selectedServices;
 
     return merged.filter(
       (service, index, current) =>
@@ -146,6 +150,21 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
     0,
   );
   const totalAmount = stateFee + (orderMode === "package" ? packagePrice : 0) + serviceTotal;
+
+  useEffect(() => {
+    const validServiceIds = new Set(documentServiceOptions.map((item) => String(item.id)));
+
+    setInitialDocuments((current) =>
+      current.map((row) =>
+        row.serviceId && !validServiceIds.has(row.serviceId)
+          ? {
+              ...row,
+              serviceId: "",
+            }
+          : row,
+      ),
+    );
+  }, [documentServiceOptions]);
 
   const handleExistingCompanyChange = (companyIdValue: string) => {
     setSelectedExistingCompanyId(companyIdValue);
@@ -175,7 +194,22 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
     );
   };
 
+  const handleOrderModeChange = (nextMode: OrderMode) => {
+    setOrderMode(nextMode);
+
+    if (nextMode === "package") {
+      setSelectedServiceIds([]);
+      return;
+    }
+
+    setPackageId("");
+  };
+
   const addDocumentRow = () => {
+    if (documentServiceOptions.length === 0) {
+      return;
+    }
+
     setInitialDocuments((current) => [...current, createInitialDocumentRow()]);
   };
 
@@ -377,7 +411,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
         input: {
           companyId,
           ...(orderMode === "package" && packageId ? { packageId: Number(packageId) } : {}),
-          serviceIds: selectedServiceIds,
+          serviceIds: orderMode === "services" ? selectedServiceIds : [],
           price: totalAmount,
           startDate: orderDates.startDate,
           endDate: orderDates.endDate,
@@ -469,6 +503,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
         <SegmentedControl options={companyModeOptions} value={companyMode} onChange={setCompanyMode} />
 
         <Surface style={styles.card}>
+          <Text style={[styles.sectionEyebrow, { color: colors.textSoft }]}>Company</Text>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Company</Text>
           {companyMode === "existing" ? (
             <PickerField
@@ -592,61 +627,72 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
           />
         </Surface>
 
-        <SegmentedControl options={orderModeOptions} value={orderMode} onChange={setOrderMode} />
+        <SegmentedControl options={orderModeOptions} value={orderMode} onChange={handleOrderModeChange} />
 
         <Surface style={styles.card}>
+          <Text style={[styles.sectionEyebrow, { color: colors.textSoft }]}>Order setup</Text>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Order setup</Text>
           {orderMode === "package" ? (
-            <PickerField
-              label="Package"
-              selectedValue={packageId}
-              options={[
-                { label: "Choose package", value: "" },
-                ...packageOptions.map((item) => ({
-                  label: `${item.name} (${formatCurrency(item.currentPrice)})`,
-                  value: String(item.id),
-                })),
-              ]}
-              onValueChange={setPackageId}
-            />
-          ) : null}
+            <>
+              <PickerField
+                label="Package"
+                selectedValue={packageId}
+                options={[
+                  { label: "Choose package", value: "" },
+                  ...packageOptions.map((item) => ({
+                    label: `${item.name} (${formatCurrency(item.currentPrice)})`,
+                    value: String(item.id),
+                  })),
+                ]}
+                onValueChange={setPackageId}
+              />
+              <View style={[styles.infoPanel, { backgroundColor: colors.cardMuted }]}>
+                <Text style={[styles.infoLabel, { color: colors.textSoft }]}>
+                  Included services
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>
+                  {packageIncludedServiceNames || "Choose a package to see included services."}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.helper, { color: colors.textSoft }]}>
+                Select one or more direct services for this order.
+              </Text>
+              <View style={styles.chipWrap}>
+                {serviceOptions.map((service) => {
+                  const active = selectedServiceIds.includes(service.id);
 
-          <Text style={[styles.helper, { color: colors.textSoft }]}>
-            {orderMode === "package"
-              ? "Choose add-on services if needed."
-              : "Select one or more services for this order."}
-          </Text>
-          <View style={styles.chipWrap}>
-            {serviceOptions.map((service) => {
-              const active = selectedServiceIds.includes(service.id);
-
-              return (
-                <Pressable
-                  key={service.id}
-                  onPress={() => toggleService(service.id)}
-                  style={[
-                    styles.serviceChip,
-                    {
-                      backgroundColor: active ? colors.accent : colors.cardMuted,
-                      borderColor: active ? colors.accent : colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.serviceChipLabel,
-                      { color: active ? "#042321" : colors.text },
-                    ]}
-                  >
-                    {service.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                  return (
+                    <Pressable
+                      key={service.id}
+                      onPress={() => toggleService(service.id)}
+                      style={[
+                        styles.serviceChip,
+                        {
+                          backgroundColor: active ? colors.accent : colors.cardMuted,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.serviceChipLabel,
+                          { color: active ? "#042321" : colors.text },
+                        ]}
+                      >
+                        {service.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
         </Surface>
 
         <Surface style={styles.card}>
+          <Text style={[styles.sectionEyebrow, { color: colors.textSoft }]}>Payment</Text>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment</Text>
           <SegmentedControl
             options={paymentStatusOptions}
@@ -661,7 +707,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
               onChangeText={setPaidAmount}
             />
           ) : null}
-          <View style={styles.summaryCard}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.cardMuted }]}>
             <Text style={[styles.summaryLine, { color: colors.text }]}>
               State fee: {formatCurrency(stateFee)}
             </Text>
@@ -679,21 +725,27 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
 
         <Surface style={styles.card}>
           <View style={[styles.rowBetween, compact && styles.rowBetweenStack]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Initial documents</Text>
+            <View style={styles.titleBlock}>
+              <Text style={[styles.sectionEyebrow, { color: colors.textSoft }]}>
+                Initial documents
+              </Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Initial documents</Text>
+            </View>
             <Button
               label="Add row"
               tone="secondary"
+              disabled={documentServiceOptions.length === 0 || submitting}
               onPress={addDocumentRow}
               style={compact ? styles.fullWidthButton : undefined}
             />
           </View>
           {initialDocuments.length === 0 ? (
             <Text style={[styles.helper, { color: colors.textSoft }]}>
-              Optional. Uploaded documents will be submitted right after order creation.
+              Optional. You can add multiple documents for the same service before creating the order.
             </Text>
           ) : null}
           {initialDocuments.map((row) => (
-            <View key={row.id} style={[styles.documentRow, { borderColor: colors.border }]}>
+            <View key={row.id} style={[styles.documentRow, { backgroundColor: colors.cardMuted }]}>
               <PickerField
                 label="Service"
                 selectedValue={row.serviceId}
@@ -751,14 +803,23 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
 
 const styles = StyleSheet.create({
   stack: {
-    gap: 16,
-  },
-  card: {
     gap: 14,
   },
+  card: {
+    gap: 12,
+  },
+  sectionEyebrow: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
+  },
+  titleBlock: {
+    gap: 3,
   },
   row: {
     flexDirection: "row",
@@ -777,23 +838,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  infoPanel: {
+    borderRadius: 8,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
   chipWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   serviceChip: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   serviceChipLabel: {
     fontSize: 13,
     fontWeight: "700",
   },
   summaryCard: {
+    borderRadius: 8,
     gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   summaryLine: {
     fontSize: 14,
@@ -814,10 +894,9 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   documentRow: {
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 8,
     gap: 12,
-    padding: 14,
+    padding: 12,
   },
   inlineActions: {
     flexDirection: "row",

@@ -14,14 +14,7 @@ export function getStatusTone(status: OrderStatus) {
 }
 
 export function collectOrderServiceNames(order: OrdersPageItem | StatusBoardOrder) {
-  const directNames =
-    order.orderServices?.map((item) => item?.service?.name ?? null) ?? [];
-  const packageNames =
-    order.orderPackages?.flatMap(
-      (item) => item?.package?.packageServices?.map((service) => service?.service?.name ?? null) ?? [],
-    ) ?? [];
-
-  return uniqueValues([...directNames, ...packageNames]);
+  return uniqueValues(order.orderServices?.map((item) => item?.service?.name ?? null) ?? []);
 }
 
 export function collectOrderPackageNames(order: OrdersPageItem | StatusBoardOrder) {
@@ -34,7 +27,11 @@ export function buildOrderSummary(order: OrdersPageItem | StatusBoardOrder) {
 
   return {
     packageLabel: packageNames.length ? packageNames.join(", ") : "Single services",
-    serviceLabel: serviceNames.length ? serviceNames.join(", ") : "No services",
+    serviceLabel: serviceNames.length
+      ? serviceNames.join(", ")
+      : packageNames.length
+        ? "No extra services"
+        : "No services",
   };
 }
 

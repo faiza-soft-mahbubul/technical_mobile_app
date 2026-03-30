@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/common/button";
 import { Screen } from "@/components/common/screen";
-import { SectionHeader } from "@/components/common/section-header";
 import { SegmentedControl } from "@/components/common/segmented-control";
 import { Surface } from "@/components/common/surface";
 import { useAuth } from "@/providers/auth-provider";
@@ -21,11 +20,6 @@ export function SettingsScreen() {
 
   return (
     <Screen>
-      <SectionHeader
-        title="Settings"
-        description="Theme and technical admin account preferences."
-      />
-
       <View style={styles.stack}>
         <Surface style={styles.card}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>Profile</Text>
@@ -63,7 +57,7 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   stack: {
     gap: 16,
-    marginTop: 18,
+    marginTop: 8,
   },
   card: {
     gap: 14,

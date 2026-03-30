@@ -25,12 +25,12 @@ export function SegmentedControl<T extends string>({
       style={[
         styles.wrapper,
         {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
+          backgroundColor: colors.cardMuted,
+          borderColor: "transparent",
         },
       ]}
     >
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {options.map((option) => {
           const active = option.value === value;
 
@@ -42,7 +42,7 @@ export function SegmentedControl<T extends string>({
                 styles.pill,
                 {
                   backgroundColor: active ? colors.accent : colors.cardMuted,
-                  borderColor: active ? colors.accent : colors.border,
+                  borderColor: "transparent",
                 },
               ]}
             >
@@ -78,27 +78,30 @@ export function SegmentedControl<T extends string>({
 
 const styles = StyleSheet.create({
   wrapper: {
-    borderRadius: 18,
+    borderRadius: 8,
     borderWidth: 1,
-    padding: 6,
+    padding: 4,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 6,
   },
   pill: {
-    borderRadius: 14,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
     gap: 6,
-    marginRight: 8,
-    minHeight: 40,
-    paddingHorizontal: 14,
+    minHeight: 34,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
   },
   meta: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
   },
 });

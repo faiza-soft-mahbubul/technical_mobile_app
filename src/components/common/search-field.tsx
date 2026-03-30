@@ -10,8 +10,8 @@ export function SearchField(props: TextInputProps) {
       style={[
         styles.wrapper,
         {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
+          backgroundColor: colors.cardMuted,
+          borderColor: "transparent",
         },
       ]}
     >
@@ -29,11 +29,11 @@ export function SearchField(props: TextInputProps) {
 const styles = StyleSheet.create({
   wrapper: {
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
     gap: 10,
-    minHeight: 50,
+    minHeight: 46,
     paddingHorizontal: 14,
   },
   input: {

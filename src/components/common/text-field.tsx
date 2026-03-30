@@ -63,10 +63,10 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   input: {
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: 0,
     fontSize: 15,
-    minHeight: 48,
+    minHeight: 46,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },

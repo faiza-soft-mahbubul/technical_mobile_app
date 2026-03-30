@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import { RefreshControl, ScrollView, StyleSheet, View, type ScrollViewProps, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme } from "@/theme/theme-provider";
@@ -19,11 +20,18 @@ export function Screen({
   contentStyle,
   ...props
 }: ScreenProps) {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {isDark ? (
+        <LinearGradient
+          colors={["#04101d", "#071427", "#0a1930"]}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         refreshControl={
           onRefresh ? (
@@ -59,6 +67,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
   },
@@ -69,9 +80,9 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   padded: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    paddingTop: 16,
+    paddingHorizontal: 14,
+    paddingBottom: 22,
+    paddingTop: 14,
   },
   inlineScreen: {
     flex: 1,

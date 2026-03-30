@@ -25,7 +25,7 @@ import type {
 } from "@/api/types";
 import type { MainTabScreenProps } from "@/navigation/types";
 import { BarChart } from "@/components/charts/bar-chart";
-import { DonutChart } from "@/components/charts/donut-chart";
+import { DonutChart, DONUT_CHART_COLORS } from "@/components/charts/donut-chart";
 import { useAuth } from "@/providers/auth-provider";
 import { formatDateTime, formatRelativeTime } from "@/utils/format";
 import { useAsyncResource } from "@/utils/use-async-resource";
@@ -50,10 +50,10 @@ const PALETTE = {
 
 const rangeOptions = [
   { label: "Today", value: "TODAY" },
-  { label: "Yesterday", value: "YESTERDAY" },
-  { label: "Last 7 Days", value: "LAST_7_DAYS" },
-  { label: "This Month", value: "THIS_MONTH" },
-  { label: "Last Month", value: "LAST_MONTH" },
+  { label: "Yday", value: "YESTERDAY" },
+  { label: "7D", value: "LAST_7_DAYS" },
+  { label: "Month", value: "THIS_MONTH" },
+  { label: "Last", value: "LAST_MONTH" },
 ] as const;
 
 type OverviewBundle = {
@@ -91,6 +91,34 @@ function getLaneTone(label: string) {
   return {
     backgroundColor: "rgba(28, 207, 190, 0.18)",
     color: PALETTE.accent,
+  };
+}
+
+function getStatCardTone(accent: string) {
+  if (accent === PALETTE.pending) {
+    return {
+      backgroundColor: "#4b3310",
+      labelColor: "#ffe3b2",
+    };
+  }
+
+  if (accent === PALETTE.processing) {
+    return {
+      backgroundColor: "#15395f",
+      labelColor: "#d5e9ff",
+    };
+  }
+
+  if (accent === PALETTE.success) {
+    return {
+      backgroundColor: "#123b25",
+      labelColor: "#d8ffe8",
+    };
+  }
+
+  return {
+    backgroundColor: "#0f3f44",
+    labelColor: "#d8fffd",
   };
 }
 
@@ -181,22 +209,22 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
     ? [
         {
           accent: PALETTE.accent,
-          label: "Total Companies",
+          label: "Companies",
           value: resource.data.stats.totalCompanies,
         },
         {
           accent: PALETTE.pending,
-          label: "Pending Orders",
+          label: "Pending",
           value: resource.data.stats.pendingOrders,
         },
         {
           accent: PALETTE.processing,
-          label: "Processing Orders",
+          label: "Progress",
           value: resource.data.stats.processingOrders,
         },
         {
           accent: PALETTE.success,
-          label: "Completed Orders",
+          label: "Done",
           value: resource.data.stats.completedOrders,
         },
       ]
@@ -204,14 +232,6 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
 
   return (
     <LinearGradient colors={BACKGROUND_GRADIENT} style={styles.gradient}>
-      <View pointerEvents="none" style={[styles.glow, styles.glowPrimary]} />
-      <View pointerEvents="none" style={[styles.glow, styles.glowSecondary]} />
-      <View pointerEvents="none" style={[styles.bubble, styles.bubbleOne]} />
-      <View pointerEvents="none" style={[styles.bubble, styles.bubbleTwo]} />
-      <View pointerEvents="none" style={[styles.bubble, styles.bubbleThree]} />
-      <View pointerEvents="none" style={[styles.bubbleRing, styles.bubbleRingOne]} />
-      <View pointerEvents="none" style={[styles.bubbleRing, styles.bubbleRingTwo]} />
-
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -227,43 +247,38 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.viewport}>
-            <View style={styles.hero}>
-              <Text style={styles.heroTitle}>Overview</Text>
-              <Text style={styles.heroMeta}>
-                {referenceDate.toLocaleString("en-US", { month: "long" })} {referenceDate.getFullYear()}
-              </Text>
+            <Text style={styles.heroMeta}>
+              {referenceDate.toLocaleString("en-US", { month: "long" })} {referenceDate.getFullYear()}
+            </Text>
+
+            <View style={styles.rangeSection}>
+              <View style={styles.rangeRow}>
+                {rangeOptions.map((option) => {
+                  const active = range === option.value;
+
+                  return active ? (
+                    <LinearGradient
+                      key={option.value}
+                      colors={RANGE_ACTIVE_GRADIENT}
+                      style={styles.rangeChipActive}
+                    >
+                      <Text style={styles.rangeChipActiveLabel}>{option.label}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <Pressable
+                      key={option.value}
+                      style={({ pressed }) => [
+                        styles.rangeChip,
+                        pressed ? styles.rangeChipPressed : null,
+                      ]}
+                      onPress={() => setRange(option.value)}
+                    >
+                      <Text style={styles.rangeChipLabel}>{option.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
-
-            <ScrollView
-              contentContainerStyle={styles.rangeRow}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            >
-              {rangeOptions.map((option) => {
-                const active = range === option.value;
-
-                return active ? (
-                  <LinearGradient
-                    key={option.value}
-                    colors={RANGE_ACTIVE_GRADIENT}
-                    style={styles.rangeChipActive}
-                  >
-                    <Text style={styles.rangeChipActiveLabel}>{option.label}</Text>
-                  </LinearGradient>
-                ) : (
-                  <Pressable
-                    key={option.value}
-                    style={({ pressed }) => [
-                      styles.rangeChip,
-                      pressed ? styles.rangeChipPressed : null,
-                    ]}
-                    onPress={() => setRange(option.value)}
-                  >
-                    <Text style={styles.rangeChipLabel}>{option.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
 
             {resource.loading && !resource.data ? (
               <View style={styles.statePanel}>
@@ -281,22 +296,24 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
 
             {resource.data ? (
               <View style={styles.stack}>
-                <View style={styles.statsGrid}>
-                  {statItems.map((item) => (
-                    <View
-                      key={item.label}
-                      style={[
-                        styles.statCard,
-                        {
-                          width: compact ? "100%" : "48%",
-                        },
-                      ]}
-                    >
-                      <View style={[styles.statAccent, { backgroundColor: item.accent }]} />
-                      <Text style={styles.statLabel}>{item.label}</Text>
-                      <Text style={styles.statValue}>{item.value}</Text>
-                    </View>
-                  ))}
+                <View style={styles.statsPanel}>
+                  <View style={styles.statsGrid}>
+                    {statItems.map((item) => {
+                      const tone = getStatCardTone(item.accent);
+
+                      return (
+                      <View
+                        key={item.label}
+                        style={[styles.statCard, { backgroundColor: tone.backgroundColor }]}
+                      >
+                        <Text numberOfLines={2} style={[styles.statLabel, { color: tone.labelColor }]}>
+                          {item.label}
+                        </Text>
+                        <Text style={styles.statValue}>{item.value}</Text>
+                      </View>
+                      );
+                    })}
+                  </View>
                 </View>
 
                 <View style={styles.panel}>
@@ -307,6 +324,7 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
                   <BarChart
                     barColor={PALETTE.accent}
                     data={resource.data.monthlyPoints}
+                    height={compact ? 118 : 124}
                     labelColor={PALETTE.muted}
                     radius={6}
                   />
@@ -324,16 +342,29 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
                     <DonutChart
                       data={resource.data.packageDistribution}
                       labelColor={PALETTE.muted}
-                      size={compact ? 152 : 170}
+                      size={compact ? 104 : 112}
                       total={resource.data.totalPackageOrders}
                       totalColor={PALETTE.text}
                       trackColor={PALETTE.chartTrack}
                     />
 
                     <View style={styles.legend}>
-                      {resource.data.packageDistribution.map((item) => (
+                      {resource.data.packageDistribution.map((item, index) => (
                         <View key={item.label} style={styles.legendRow}>
-                          <Text style={styles.legendLabel}>{item.label}</Text>
+                          <View style={styles.legendCopy}>
+                            <View
+                              style={[
+                                styles.legendDot,
+                                {
+                                  backgroundColor:
+                                    DONUT_CHART_COLORS[index % DONUT_CHART_COLORS.length],
+                                },
+                              ]}
+                            />
+                            <Text numberOfLines={1} style={styles.legendLabel}>
+                              {item.label}
+                            </Text>
+                          </View>
                           <View style={styles.legendPill}>
                             <Text style={styles.legendPillLabel}>{item.count}</Text>
                           </View>
@@ -421,158 +452,96 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingBottom: 28,
-    paddingHorizontal: 18,
-    paddingTop: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingTop: 8,
   },
   viewport: {
     alignSelf: "center",
     maxWidth: 980,
     width: "100%",
   },
-  glow: {
-    borderRadius: 999,
-    opacity: 0.24,
-    position: "absolute",
-  },
-  glowPrimary: {
-    backgroundColor: "#11b5bf",
-    height: 220,
-    right: -56,
-    top: 90,
-    width: 220,
-  },
-  glowSecondary: {
-    backgroundColor: "#0f766e",
-    bottom: 120,
-    height: 180,
-    left: -36,
-    width: 180,
-  },
-  bubble: {
-    backgroundColor: "rgba(255, 255, 255, 0.045)",
-    borderRadius: 999,
-    position: "absolute",
-  },
-  bubbleOne: {
-    height: 88,
-    left: 20,
-    top: 150,
-    width: 88,
-  },
-  bubbleTwo: {
-    height: 58,
-    right: 42,
-    top: 310,
-    width: 58,
-  },
-  bubbleThree: {
-    bottom: 160,
-    height: 74,
-    right: 18,
-    width: 74,
-  },
-  bubbleRing: {
-    backgroundColor: "transparent",
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 999,
-    borderWidth: 1,
-    position: "absolute",
-  },
-  bubbleRingOne: {
-    height: 124,
-    right: -14,
-    top: 126,
-    width: 124,
-  },
-  bubbleRingTwo: {
-    bottom: 92,
-    height: 108,
-    left: -26,
-    width: 108,
-  },
-  hero: {
-    gap: 6,
-    marginBottom: 18,
-  },
-  heroTitle: {
-    color: PALETTE.text,
-    fontSize: 34,
-    fontWeight: "900",
-    letterSpacing: -1.1,
-  },
   heroMeta: {
     color: PALETTE.muted,
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: "600",
+    marginBottom: 8,
+  },
+  rangeSection: {
+    marginTop: 2,
   },
   rangeRow: {
-    gap: 10,
-    paddingBottom: 6,
+    flexDirection: "row",
+    gap: 4,
   },
   rangeChip: {
     alignItems: "center",
     backgroundColor: PALETTE.backgroundSofter,
-    borderRadius: 8,
+    borderRadius: 7,
+    flex: 1,
     justifyContent: "center",
-    minHeight: 38,
-    paddingHorizontal: 14,
+    minHeight: 26,
+    paddingHorizontal: 4,
   },
   rangeChipPressed: {
     opacity: 0.88,
   },
   rangeChipActive: {
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: 7,
+    flex: 1,
     justifyContent: "center",
-    minHeight: 38,
-    paddingHorizontal: 14,
+    minHeight: 26,
+    paddingHorizontal: 4,
   },
   rangeChipLabel: {
     color: PALETTE.muted,
-    fontSize: 13,
+    fontSize: 9,
     fontWeight: "700",
   },
   rangeChipActiveLabel: {
     color: "#042321",
-    fontSize: 13,
+    fontSize: 9,
     fontWeight: "800",
   },
   statePanel: {
     backgroundColor: PALETTE.backgroundSoft,
     borderRadius: 8,
-    marginTop: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   stateTitle: {
     color: PALETTE.text,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "800",
   },
   stateCopy: {
     color: PALETTE.muted,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
   },
   stack: {
-    gap: 14,
-    marginTop: 18,
+    gap: 8,
+    marginTop: 8,
+  },
+  statsPanel: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   statsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
+    gap: 6,
   },
   statCard: {
-    backgroundColor: PALETTE.backgroundSoft,
     borderRadius: 8,
-    gap: 12,
-    minHeight: 116,
+    flex: 1,
+    gap: 4,
+    minHeight: 66,
     overflow: "hidden",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 7,
+    paddingVertical: 7,
     shadowColor: "#020817",
     shadowOffset: {
       width: 0,
@@ -581,28 +550,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 22,
   },
-  statAccent: {
-    borderRadius: 8,
-    height: 4,
-    width: 44,
-  },
   statLabel: {
-    color: PALETTE.muted,
-    fontSize: 13,
+    fontSize: 8,
     fontWeight: "600",
+    lineHeight: 11,
   },
   statValue: {
     color: PALETTE.text,
-    fontSize: 30,
+    fontSize: 16,
     fontWeight: "900",
     letterSpacing: -1,
   },
   panel: {
     backgroundColor: PALETTE.backgroundSoft,
     borderRadius: 8,
-    gap: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     shadowColor: "#020817",
     shadowOffset: {
       width: 0,
@@ -612,34 +576,46 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
   },
   panelHeader: {
-    gap: 4,
+    gap: 2,
   },
   panelTitle: {
     color: PALETTE.text,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "800",
   },
   panelMeta: {
     color: PALETTE.muted,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
   },
   chartBlock: {
-    gap: 18,
+    gap: 8,
   },
   legend: {
-    gap: 10,
+    gap: 5,
   },
   legendRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 12,
+    gap: 6,
     justifyContent: "space-between",
+  },
+  legendCopy: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+    minWidth: 0,
+  },
+  legendDot: {
+    borderRadius: 99,
+    height: 8,
+    width: 8,
   },
   legendLabel: {
     color: PALETTE.text,
     flex: 1,
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: "600",
   },
   legendPill: {
@@ -647,24 +623,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(28, 207, 190, 0.14)",
     borderRadius: 8,
     justifyContent: "center",
-    minWidth: 38,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    minWidth: 28,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
   legendPillLabel: {
     color: PALETTE.accent,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "800",
   },
   activityHeader: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
     justifyContent: "space-between",
   },
   activityHeaderCopy: {
     flex: 1,
-    gap: 4,
+    gap: 2,
     minWidth: 0,
   },
   feedButton: {
@@ -672,62 +648,62 @@ const styles = StyleSheet.create({
     backgroundColor: PALETTE.backgroundSofter,
     borderRadius: 8,
     justifyContent: "center",
-    minHeight: 36,
-    paddingHorizontal: 12,
+    minHeight: 24,
+    paddingHorizontal: 8,
   },
   feedButtonPressed: {
     opacity: 0.88,
   },
   feedButtonLabel: {
     color: PALETTE.text,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "800",
   },
   feed: {
-    gap: 12,
+    gap: 6,
   },
   feedItem: {
-    gap: 8,
+    gap: 4,
   },
   feedTop: {
     alignItems: "flex-start",
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
     justifyContent: "space-between",
   },
   feedTitle: {
     color: PALETTE.text,
     flex: 1,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
   },
   lanePill: {
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
   },
   lanePillLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
   },
   feedDescription: {
     color: "#c8d7ea",
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 16,
   },
   feedMeta: {
     color: PALETTE.text,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
   },
   feedMetaMuted: {
     color: PALETTE.muted,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 9,
+    lineHeight: 14,
   },
   feedDivider: {
     backgroundColor: PALETTE.line,
     height: 1,
-    marginTop: 4,
+    marginTop: 2,
   },
 });

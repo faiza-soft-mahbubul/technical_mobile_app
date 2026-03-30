@@ -16,7 +16,6 @@ import { EmptyState } from "@/components/common/empty-state";
 import { LoadingState } from "@/components/common/loading-state";
 import { Screen } from "@/components/common/screen";
 import { SearchField } from "@/components/common/search-field";
-import { SectionHeader } from "@/components/common/section-header";
 import { Surface } from "@/components/common/surface";
 import { useAuth } from "@/providers/auth-provider";
 import { useAppTheme } from "@/theme/theme-provider";
@@ -63,11 +62,6 @@ export function CompaniesScreen({ navigation }: MainTabScreenProps<"Companies">)
 
   return (
     <Screen onRefresh={() => void resource.reload("refresh")} refreshing={resource.refreshing}>
-      <SectionHeader
-        title="All Companies"
-        description="Browse company accounts, service mix, payment state, and document history."
-      />
-
       <View style={styles.stack}>
         <SearchField
           placeholder="Search company, owner, or email"
@@ -220,7 +214,7 @@ export function CompaniesScreen({ navigation }: MainTabScreenProps<"Companies">)
 const styles = StyleSheet.create({
   stack: {
     gap: 14,
-    marginTop: 18,
+    marginTop: 8,
   },
   countryRow: {
     flexDirection: "row",

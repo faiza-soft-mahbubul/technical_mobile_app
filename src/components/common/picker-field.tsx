@@ -35,7 +35,7 @@ export function PickerField({
           styles.container,
           {
             backgroundColor: colors.cardMuted,
-            borderColor: colors.border,
+            borderColor: "transparent",
             opacity: enabled ? 1 : 0.6,
           },
         ]}
@@ -80,11 +80,11 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   container: {
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: 0,
     overflow: "hidden",
   },
   picker: {
-    minHeight: 48,
+    minHeight: 46,
   },
 });

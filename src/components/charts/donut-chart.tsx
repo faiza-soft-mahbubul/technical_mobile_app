@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, useWindowDimensions } from "react-native";
 import type { PackageDistributionPoint } from "@/api/types";
 import { useAppTheme } from "@/theme/theme-provider";
 
-const CHART_COLORS = [
+export const DONUT_CHART_COLORS = [
   "#19c4bb",
   "#2f80ed",
   "#f7a928",
@@ -50,7 +50,7 @@ export function DonutChart(props: {
           dash,
           item,
           offset,
-          stroke: CHART_COLORS[index % CHART_COLORS.length],
+          stroke: DONUT_CHART_COLORS[index % DONUT_CHART_COLORS.length],
         };
       }),
     [circumference, props.data, props.total],

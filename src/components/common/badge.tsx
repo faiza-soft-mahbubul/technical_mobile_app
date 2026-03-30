@@ -5,28 +5,28 @@ export function Badge(props: {
   label: string;
   tone?: "neutral" | "pending" | "processing" | "completed" | "accent";
 }) {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   const palette = {
     neutral: {
-      backgroundColor: colors.cardMuted,
-      color: colors.textDim,
+      backgroundColor: isDark ? "#13253d" : colors.cardMuted,
+      color: isDark ? "#bfd0e4" : colors.textDim,
     },
     pending: {
-      backgroundColor: "#fff2d8",
-      color: "#b7791f",
+      backgroundColor: isDark ? "#4a3310" : "#fff2d8",
+      color: isDark ? "#ffd79b" : "#b7791f",
     },
     processing: {
-      backgroundColor: "#e8f1ff",
-      color: "#2b6adf",
+      backgroundColor: isDark ? "#163a60" : "#e8f1ff",
+      color: isDark ? "#c4deff" : "#2b6adf",
     },
     completed: {
-      backgroundColor: "#daf3e4",
-      color: "#20945d",
+      backgroundColor: isDark ? "#123a25" : "#daf3e4",
+      color: isDark ? "#c9ffdf" : "#20945d",
     },
     accent: {
-      backgroundColor: colors.accentMuted,
-      color: colors.accentStrong,
+      backgroundColor: isDark ? "#104044" : colors.accentMuted,
+      color: isDark ? "#cffffa" : colors.accentStrong,
     },
   }[props.tone ?? "neutral"];
 
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   label: {
     fontSize: 12,
