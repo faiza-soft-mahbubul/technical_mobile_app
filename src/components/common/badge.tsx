@@ -4,6 +4,7 @@ import { useAppTheme } from "@/theme/theme-provider";
 export function Badge(props: {
   label: string;
   tone?: "neutral" | "pending" | "processing" | "completed" | "accent";
+  size?: "default" | "compact";
 }) {
   const { colors, isDark } = useAppTheme();
 
@@ -29,10 +30,25 @@ export function Badge(props: {
       color: isDark ? "#cffffa" : colors.accentStrong,
     },
   }[props.tone ?? "neutral"];
+  const compact = props.size === "compact";
 
   return (
-    <View style={[styles.badge, { backgroundColor: palette.backgroundColor }]}>
-      <Text style={[styles.label, { color: palette.color }]}>{props.label}</Text>
+    <View
+      style={[
+        styles.badge,
+        compact ? styles.badgeCompact : null,
+        { backgroundColor: palette.backgroundColor },
+      ]}
+    >
+      <Text
+        style={[
+          styles.label,
+          compact ? styles.labelCompact : null,
+          { color: palette.color },
+        ]}
+      >
+        {props.label}
+      </Text>
     </View>
   );
 }
@@ -44,8 +60,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
+  badgeCompact: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   label: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  labelCompact: {
+    fontSize: 11,
   },
 });

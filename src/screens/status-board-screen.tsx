@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import {
   Pressable,
@@ -10,8 +11,8 @@ import {
 import { STATUS_BOARD_ORDERS_QUERY } from "@/api/documents";
 import type { OrderStatus, StatusBoardOrder } from "@/api/types";
 import { Badge } from "@/components/common/badge";
-import { Button } from "@/components/common/button";
 import { EmptyState } from "@/components/common/empty-state";
+import { IconButton } from "@/components/common/icon-button";
 import { LoadingState } from "@/components/common/loading-state";
 import { PickerField } from "@/components/common/picker-field";
 import { Screen } from "@/components/common/screen";
@@ -34,6 +35,12 @@ const statusOptions = [
   { label: "Completed", value: "COMPLETED" },
 ] as const;
 
+const pageSizeOptions = [
+  { label: "20", value: "20" },
+  { label: "30", value: "30" },
+  { label: "50", value: "50" },
+] as const;
+
 type StatusBoardResponse = {
   statusBoardOrders: {
     items: StatusBoardOrder[];
@@ -54,10 +61,11 @@ type StatusBoardResponse = {
 };
 
 export function StatusBoardScreen() {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const { width } = useWindowDimensions();
   const { executeAuthenticated } = useAuth();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<OrderStatus>("PENDING");
   const [serviceCategoryId, setServiceCategoryId] = useState<number | null>(null);
@@ -72,12 +80,12 @@ export function StatusBoardScreen() {
       >(STATUS_BOARD_ORDERS_QUERY, {
         input: {
           page,
-          pageSize: 20,
+          pageSize,
           status,
           ...(serviceCategoryId ? { serviceCategoryId } : {}),
         },
       }),
-    [executeAuthenticated, page, serviceCategoryId, status],
+    [executeAuthenticated, page, pageSize, serviceCategoryId, status],
   );
 
   const pageData = resource.data?.statusBoardOrders;
@@ -226,7 +234,16 @@ export function StatusBoardScreen() {
                 const canUpdateStatus = order.status === "PENDING" || order.status === "PROCESSING";
 
                 return (
-                  <Surface key={order.id} style={styles.card}>
+                  <Surface
+                    key={order.id}
+                    style={[
+                      styles.card,
+                      {
+                        backgroundColor: isDark ? "#091a31" : colors.card,
+                        shadowColor: isDark ? "rgba(1, 6, 18, 0.52)" : colors.shadow,
+                      },
+                    ]}
+                  >
                     <Pressable
                       disabled={!canUpdateStatus}
                       onPress={() => {
@@ -239,18 +256,13 @@ export function StatusBoardScreen() {
                         pressed && canUpdateStatus ? styles.summaryPressableActive : null,
                       ]}
                     >
-                      <View style={styles.rowBetween}>
-                        <View style={styles.copy}>
-                          <Text style={[styles.orderNumber, { color: colors.text }]}>
-                            Order #{order.id}
-                          </Text>
-                        </View>
-                        <View style={styles.statusWrap}>
-                          <Badge
-                            label={formatOrderStatusLabel(order.status)}
-                            tone={getStatusTone(order.status)}
-                          />
-                        </View>
+                      <View style={styles.copy}>
+                        <Text style={[styles.orderNumber, { color: colors.text }]}>
+                          {`Order-#${order.orderId}`}
+                        </Text>
+                        <Text style={[styles.companyName, { color: colors.textDim }]}>
+                          {order.companyInfo?.name ?? "Unknown company"}
+                        </Text>
                       </View>
 
                       <Text style={[styles.packageLabel, { color: colors.text }]}>
@@ -268,32 +280,57 @@ export function StatusBoardScreen() {
                         </View>
                       ) : null}
 
-                      <Text style={[styles.subtle, { color: colors.textSoft }]}>
-                        {formatDateTime(order.updatedAt)}
-                      </Text>
+                      <View style={styles.rowBetween}>
+                        <Text style={[styles.subtle, styles.dateMeta, { color: colors.textSoft }]}>
+                          {formatDateTime(order.updatedAt)}
+                        </Text>
+                        <Badge
+                          label={formatOrderStatusLabel(order.status)}
+                          size="compact"
+                          tone={getStatusTone(order.status)}
+                        />
+                      </View>
+
                     </Pressable>
                   </Surface>
                 );
               })
             )}
-            <View style={[styles.pagination, compact && styles.paginationCompact]}>
-              <Button
-                disabled={!pageData.hasPreviousPage}
-                label="Prev"
-                tone="secondary"
-                onPress={() => setPage((current) => Math.max(1, current - 1))}
-                style={compact ? styles.paginationButton : undefined}
-              />
-              <Text style={[styles.page, compact && styles.pageCompact, { color: colors.text }]}>
-                {pageData.totalPages === 0 ? 0 : page} / {pageData.totalPages}
-              </Text>
-              <Button
-                disabled={!pageData.hasNextPage}
-                label="Next"
-                tone="secondary"
-                onPress={() => setPage((current) => current + 1)}
-                style={compact ? styles.paginationButton : undefined}
-              />
+            <View style={[styles.paginationFooter, compact && styles.paginationFooterCompact]}>
+              <View style={styles.pageSizeWrap}>
+                <PickerField
+                  containerStyle={styles.pageSizePicker}
+                  size="compact"
+                  selectedValue={String(pageSize)}
+                  options={pageSizeOptions.map((option) => ({
+                    label: option.label,
+                    value: option.value,
+                  }))}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                />
+              </View>
+              <View style={[styles.pagination, compact && styles.paginationCompact]}>
+                <IconButton
+                  disabled={!pageData.hasPreviousPage}
+                  onPress={() => setPage((current) => Math.max(1, current - 1))}
+                  style={styles.paginationButton}
+                >
+                  <Ionicons color={colors.text} name="chevron-back" size={18} />
+                </IconButton>
+                <Text style={[styles.page, compact && styles.pageCompact, { color: colors.text }]}>
+                  {pageData.totalPages === 0 ? 0 : page} / {pageData.totalPages}
+                </Text>
+                <IconButton
+                  disabled={!pageData.hasNextPage}
+                  onPress={() => setPage((current) => current + 1)}
+                  style={styles.paginationButton}
+                >
+                  <Ionicons color={colors.text} name="chevron-forward" size={18} />
+                </IconButton>
+              </View>
             </View>
           </View>
         ) : null}
@@ -340,10 +377,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   card: {
-    gap: 14,
+    gap: 10,
   },
   summaryPressable: {
-    gap: 14,
+    gap: 10,
   },
   summaryPressableActive: {
     opacity: 0.82,
@@ -360,15 +397,15 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    gap: 4,
+    gap: 2,
     minWidth: 0,
   },
   orderNumber: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
   },
   companyName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
   statusWrap: {
@@ -380,12 +417,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   packageLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   subtle: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  dateMeta: {
+    flex: 1,
   },
   tagRow: {
     flexDirection: "row",
@@ -395,25 +435,42 @@ const styles = StyleSheet.create({
   pagination: {
     alignItems: "center",
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    justifyContent: "center",
+    flex: 1,
+    gap: 8,
+    justifyContent: "flex-end",
   },
-  paginationCompact: {
+  paginationFooter: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10,
     justifyContent: "space-between",
   },
+  paginationFooterCompact: {
+    gap: 8,
+  },
+  paginationCompact: {
+    justifyContent: "flex-end",
+  },
   paginationButton: {
-    flexGrow: 1,
-    minWidth: 112,
+    minHeight: 38,
+    minWidth: 74,
+    paddingHorizontal: 12,
+  },
+  pageSizeWrap: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 0,
+  },
+  pageSizePicker: {
+    width: 74,
   },
   page: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    minWidth: 72,
+    minWidth: 54,
     textAlign: "center",
   },
   pageCompact: {
-    minWidth: 64,
-    width: "100%",
+    minWidth: 50,
   },
 });

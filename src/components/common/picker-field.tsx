@@ -25,6 +25,7 @@ type PickerFieldProps = {
   onValueChange: (value: string) => void;
   enabled?: boolean;
   prompt?: string;
+  size?: "default" | "compact";
 };
 
 export function PickerField({
@@ -35,9 +36,11 @@ export function PickerField({
   onValueChange,
   enabled = true,
   prompt,
+  size = "default",
 }: PickerFieldProps) {
   const { colors } = useAppTheme();
   const [open, setOpen] = useState(false);
+  const compact = size === "compact";
 
   const selectedLabel = useMemo(() => {
     return options.find((option) => option.value === selectedValue)?.label ?? "";
@@ -51,6 +54,7 @@ export function PickerField({
         onPress={() => setOpen(true)}
         style={({ pressed }) => [
           styles.trigger,
+          compact ? styles.triggerCompact : null,
           {
             backgroundColor: colors.cardMuted,
             opacity: enabled ? (pressed ? 0.92 : 1) : 0.58,
@@ -61,6 +65,7 @@ export function PickerField({
           numberOfLines={1}
           style={[
             styles.triggerLabel,
+            compact ? styles.triggerLabelCompact : null,
             {
               color: selectedLabel ? colors.text : colors.textSoft,
             },
@@ -158,10 +163,17 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 14,
   },
+  triggerCompact: {
+    minHeight: 38,
+    paddingHorizontal: 10,
+  },
   triggerLabel: {
     flex: 1,
     fontSize: 15,
     fontWeight: "600",
+  },
+  triggerLabelCompact: {
+    fontSize: 13,
   },
   overlay: {
     flex: 1,

@@ -8,6 +8,7 @@ import { Badge } from "@/components/common/badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { IconButton } from "@/components/common/icon-button";
 import { LoadingState } from "@/components/common/loading-state";
+import { PickerField } from "@/components/common/picker-field";
 import { Screen } from "@/components/common/screen";
 import { SegmentedControl } from "@/components/common/segmented-control";
 import { Surface } from "@/components/common/surface";
@@ -110,7 +111,12 @@ export function CompanyDetailScreen({ route }: RootStackScreenProps<"CompanyDeta
             </Text>
           </Surface>
 
-          <SegmentedControl options={tabOptions} value={tab} onChange={setTab} />
+          <PickerField
+            options={tabOptions}
+            selectedValue={tab}
+            onValueChange={(value) => setTab(value as DetailTab)}
+            prompt="Choose section"
+          />
 
           {tab === "services"
             ? company.services.length
