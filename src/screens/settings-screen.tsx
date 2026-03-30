@@ -1,20 +1,13 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/common/button";
 import { Screen } from "@/components/common/screen";
-import { SegmentedControl } from "@/components/common/segmented-control";
 import { Surface } from "@/components/common/surface";
 import { useAuth } from "@/providers/auth-provider";
 import { useAppConfig } from "@/providers/app-config-provider";
 import { useAppTheme } from "@/theme/theme-provider";
 
-const themeOptions = [
-  { label: "System", value: "system" },
-  { label: "Light", value: "light" },
-  { label: "Dark", value: "dark" },
-] as const;
-
 export function SettingsScreen() {
-  const { colors, mode, setMode } = useAppTheme();
+  const { colors } = useAppTheme();
   const { user, logout } = useAuth();
   const { config } = useAppConfig();
 
@@ -32,7 +25,9 @@ export function SettingsScreen() {
 
         <Surface style={styles.card}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>Appearance</Text>
-          <SegmentedControl options={themeOptions} value={mode} onChange={setMode} />
+          <Text style={[styles.copy, { color: colors.textSoft }]}>
+            The mobile app now uses one unified dark gradient interface across all screens.
+          </Text>
         </Surface>
 
         <Surface style={styles.card}>

@@ -35,7 +35,13 @@ const tabOptions = [
   { label: "Documents", value: "documents" },
 ] as const;
 
+const documentTypeOptions = [
+  { label: "Submitted", value: "SUBMITTED" },
+  { label: "Received", value: "RECEIVED" },
+] as const;
+
 type DetailTab = (typeof tabOptions)[number]["value"];
+type DocumentTab = (typeof documentTypeOptions)[number]["value"];
 type CompanyAccountsResponse = {
   companyAccounts: {
     items: CompanyAccount[];
@@ -48,6 +54,7 @@ export function CompanyDetailScreen({ route }: RootStackScreenProps<"CompanyDeta
   const { config } = useAppConfig();
   const { executeAuthenticated } = useAuth();
   const [tab, setTab] = useState<DetailTab>("services");
+  const [documentTab, setDocumentTab] = useState<DocumentTab>("SUBMITTED");
   const compact = width < 390;
 
   const resource = useAsyncResource(
@@ -69,6 +76,11 @@ export function CompanyDetailScreen({ route }: RootStackScreenProps<"CompanyDeta
       resource.data?.companyAccounts.items.find((item) => item.id === route.params.companyId) ??
       null,
     [resource.data?.companyAccounts.items, route.params.companyId],
+  );
+  const visibleDocuments = useMemo(
+    () =>
+      company?.documents.filter((document) => document.documentType === documentTab) ?? [],
+    [company?.documents, documentTab],
   );
 
   return (
@@ -155,8 +167,15 @@ export function CompanyDetailScreen({ route }: RootStackScreenProps<"CompanyDeta
             : null}
 
           {tab === "documents"
-            ? company.documents.length
-              ? company.documents.map((document) => {
+            ? (
+                <View style={styles.documentsStack}>
+                  <SegmentedControl
+                    options={documentTypeOptions}
+                    value={documentTab}
+                    onChange={(value) => setDocumentTab(value as DocumentTab)}
+                  />
+                  {visibleDocuments.length
+                    ? visibleDocuments.map((document) => {
                   const fileName = resolveDocumentFileName({
                     title: document.description,
                     attachment: document.attachment,
@@ -215,12 +234,14 @@ export function CompanyDetailScreen({ route }: RootStackScreenProps<"CompanyDeta
                     </Surface>
                   );
                 })
-              : (
-                  <EmptyState
-                    title="No documents yet"
-                    description="Submitted and received files will appear here."
-                  />
-                )
+                    : (
+                        <EmptyState
+                          title={`No ${documentTab === "SUBMITTED" ? "submitted" : "received"} files`}
+                          description="Documents for this company will appear here."
+                        />
+                      )}
+                </View>
+              )
             : null}
         </View>
       ) : null}
@@ -257,6 +278,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   card: {
+    gap: 12,
+  },
+  documentsStack: {
     gap: 12,
   },
   rowBetween: {

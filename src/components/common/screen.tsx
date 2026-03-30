@@ -20,16 +20,14 @@ export function Screen({
   contentStyle,
   ...props
 }: ScreenProps) {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {isDark ? (
-        <LinearGradient
-          colors={["#04101d", "#071427", "#0a1930"]}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : null}
+      <LinearGradient
+        colors={["#020817", "#071427", "#0a1d33"]}
+        style={StyleSheet.absoluteFill}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -59,8 +57,15 @@ export function Screen({
 }
 
 export function InlineScreen({ children }: { children: ReactNode }) {
-  const { colors } = useAppTheme();
-  return <View style={[styles.inlineScreen, { backgroundColor: colors.background }]}>{children}</View>;
+  return (
+    <View style={styles.inlineScreen}>
+      <LinearGradient
+        colors={["#020817", "#071427", "#0a1d33"]}
+        style={StyleSheet.absoluteFill}
+      />
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

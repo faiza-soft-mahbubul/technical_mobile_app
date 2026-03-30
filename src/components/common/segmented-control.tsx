@@ -19,6 +19,7 @@ export function SegmentedControl<T extends string>({
   onChange,
 }: SegmentedControlProps<T>) {
   const { colors } = useAppTheme();
+  const useStaticRow = options.length <= 3;
 
   return (
     <View
@@ -30,48 +31,94 @@ export function SegmentedControl<T extends string>({
         },
       ]}
     >
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-        {options.map((option) => {
-          const active = option.value === value;
+      {useStaticRow ? (
+        <View style={styles.staticRow}>
+          {options.map((option) => {
+            const active = option.value === value;
 
-          return (
-            <Pressable
-              key={option.value}
-              onPress={() => onChange(option.value)}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: active ? colors.accent : colors.cardMuted,
-                  borderColor: "transparent",
-                },
-              ]}
-            >
-              <Text
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => onChange(option.value)}
                 style={[
-                  styles.label,
+                  styles.pill,
+                  styles.staticPill,
                   {
-                    color: active ? "#042321" : colors.text,
+                    backgroundColor: active ? colors.accent : colors.cardMuted,
+                    borderColor: "transparent",
                   },
                 ]}
               >
-                {option.label}
-              </Text>
-              {option.meta ? (
                 <Text
                   style={[
-                    styles.meta,
+                    styles.label,
                     {
-                      color: active ? "#063c38" : colors.textSoft,
+                      color: active ? "#042321" : colors.text,
                     },
                   ]}
                 >
-                  {option.meta}
+                  {option.label}
                 </Text>
-              ) : null}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                {option.meta ? (
+                  <Text
+                    style={[
+                      styles.meta,
+                      {
+                        color: active ? "#063c38" : colors.textSoft,
+                      },
+                    ]}
+                  >
+                    {option.meta}
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+          {options.map((option) => {
+            const active = option.value === value;
+
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => onChange(option.value)}
+                style={[
+                  styles.pill,
+                  {
+                    backgroundColor: active ? colors.accent : colors.cardMuted,
+                    borderColor: "transparent",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: active ? "#042321" : colors.text,
+                    },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                {option.meta ? (
+                  <Text
+                    style={[
+                      styles.meta,
+                      {
+                        color: active ? "#063c38" : colors.textSoft,
+                      },
+                    ]}
+                  >
+                    {option.meta}
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -86,6 +133,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
   },
+  staticRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
   pill: {
     borderRadius: 8,
     borderWidth: 1,
@@ -95,6 +146,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  staticPill: {
+    flex: 1,
+    minWidth: 0,
   },
   label: {
     fontSize: 12,

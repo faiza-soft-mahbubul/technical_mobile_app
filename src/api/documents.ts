@@ -141,7 +141,15 @@ export const STATUS_BOARD_ORDERS_QUERY = `
     statusBoardOrders(input: $input) {
       items {
         id
+        orderId
         status
+        serviceCategoryId
+        serviceCategoryName
+        matchedServiceNames
+        availableServiceCategories {
+          serviceCategoryId
+          name
+        }
         createdAt
         updatedAt
         companyInfo {
@@ -152,6 +160,9 @@ export const STATUS_BOARD_ORDERS_QUERY = `
           description
           attachment
           documentType
+          serviceId
+          serviceCategoryId
+          isStatusOnly
           createdAt
           uploadedBy
           uploadedByUser {

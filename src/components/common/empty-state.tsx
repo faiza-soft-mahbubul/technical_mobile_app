@@ -12,8 +12,8 @@ export function EmptyState(props: {
       style={[
         styles.container,
         {
-          backgroundColor: colors.cardMuted,
-          borderColor: colors.border,
+          backgroundColor: colors.card,
+          borderColor: "transparent",
         },
       ]}
     >
@@ -28,11 +28,11 @@ export function EmptyState(props: {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    borderRadius: 18,
+    borderRadius: 8,
     borderWidth: 1,
     gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
   },
   title: {
     fontSize: 16,

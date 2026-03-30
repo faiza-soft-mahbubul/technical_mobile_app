@@ -123,6 +123,9 @@ export type StatusBoardDocument = {
   description: string;
   attachment: string;
   documentType: ServiceDocumentType;
+  serviceId?: number | null;
+  serviceCategoryId?: number | null;
+  isStatusOnly?: boolean | null;
   createdAt: string;
   uploadedBy: string;
   uploadedByUser?: {
@@ -144,8 +147,16 @@ export type StatusBoardDocument = {
 };
 
 export type StatusBoardOrder = {
-  id: number;
+  id: string;
+  orderId: number;
   status: OrderStatus;
+  serviceCategoryId: number;
+  serviceCategoryName: string;
+  matchedServiceNames: string[];
+  availableServiceCategories: Array<{
+    serviceCategoryId: number;
+    name: string;
+  }>;
   createdAt: string;
   updatedAt: string;
   companyInfo?: {

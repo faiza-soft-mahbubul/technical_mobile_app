@@ -1,7 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,20 +12,14 @@ import type { OrderStatus, StatusBoardOrder } from "@/api/types";
 import { Badge } from "@/components/common/badge";
 import { Button } from "@/components/common/button";
 import { EmptyState } from "@/components/common/empty-state";
-import { IconButton } from "@/components/common/icon-button";
 import { LoadingState } from "@/components/common/loading-state";
+import { PickerField } from "@/components/common/picker-field";
 import { Screen } from "@/components/common/screen";
 import { SearchField } from "@/components/common/search-field";
-import { SegmentedControl } from "@/components/common/segmented-control";
 import { Surface } from "@/components/common/surface";
-import { useAppConfig } from "@/providers/app-config-provider";
+import { StatusActionModal } from "@/components/status-board/status-action-modal";
 import { useAuth } from "@/providers/auth-provider";
 import { useAppTheme } from "@/theme/theme-provider";
-import {
-  downloadDocument,
-  openDocumentPreview,
-  resolveDocumentFileName,
-} from "@/utils/documents";
 import { formatDateTime, formatOrderStatusLabel } from "@/utils/format";
 import {
   buildOrderSummary,
@@ -64,12 +56,12 @@ type StatusBoardResponse = {
 export function StatusBoardScreen() {
   const { colors } = useAppTheme();
   const { width } = useWindowDimensions();
-  const { config } = useAppConfig();
   const { executeAuthenticated } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<OrderStatus>("PENDING");
   const [serviceCategoryId, setServiceCategoryId] = useState<number | null>(null);
+  const [activeOrder, setActiveOrder] = useState<StatusBoardOrder | null>(null);
   const compact = width < 390;
 
   const resource = useAsyncResource(
@@ -120,25 +112,29 @@ export function StatusBoardScreen() {
 
   return (
     <Screen
+      contentStyle={styles.screenContent}
       onRefresh={() => {
         void resource.reload("refresh");
       }}
       refreshing={resource.refreshing}
     >
       <View style={styles.stack}>
+        <PickerField
+          selectedValue={status}
+          options={statusOptions.map((option) => ({
+            label: option.label,
+            value: option.value,
+          }))}
+          onValueChange={(value) => {
+            setStatus(value as OrderStatus);
+            setPage(1);
+          }}
+        />
         <SearchField
           placeholder="Search company, package, or service"
           returnKeyType="search"
           value={search}
           onChangeText={setSearch}
-        />
-        <SegmentedControl
-          options={statusOptions}
-          value={status}
-          onChange={(value) => {
-            setStatus(value);
-            setPage(1);
-          }}
         />
 
         {pageData ? (
@@ -227,129 +223,63 @@ export function StatusBoardScreen() {
               visibleOrders.map((order) => {
                 const summary = buildOrderSummary(order);
                 const categories = collectOrderCategoryTags(order);
+                const canUpdateStatus = order.status === "PENDING" || order.status === "PROCESSING";
 
                 return (
                   <Surface key={order.id} style={styles.card}>
-                    <View style={[styles.rowBetween, compact && styles.rowStack]}>
-                      <View style={styles.copy}>
-                        <Text style={[styles.orderNumber, { color: colors.text }]}>
-                          Order #{order.id}
-                        </Text>
-                        <Text style={[styles.companyName, { color: colors.textDim }]}>
-                          {order.companyInfo?.name ?? "Unknown company"}
-                        </Text>
+                    <Pressable
+                      disabled={!canUpdateStatus}
+                      onPress={() => {
+                        if (canUpdateStatus) {
+                          setActiveOrder(order);
+                        }
+                      }}
+                      style={({ pressed }) => [
+                        styles.summaryPressable,
+                        pressed && canUpdateStatus ? styles.summaryPressableActive : null,
+                      ]}
+                    >
+                      <View style={[styles.rowBetween, compact && styles.rowStack]}>
+                        <View style={styles.copy}>
+                          <Text style={[styles.orderNumber, { color: colors.text }]}>
+                            Order #{order.id}
+                          </Text>
+                          <Text style={[styles.companyName, { color: colors.textDim }]}>
+                            {order.companyInfo?.name ?? "Unknown company"}
+                          </Text>
+                        </View>
+                        <View style={styles.statusWrap}>
+                          <Badge
+                            label={formatOrderStatusLabel(order.status)}
+                            tone={getStatusTone(order.status)}
+                          />
+                          {canUpdateStatus ? (
+                            <Text style={[styles.actionHint, { color: colors.accent }]}>
+                              Tap to update
+                            </Text>
+                          ) : null}
+                        </View>
                       </View>
-                      <Badge
-                        label={formatOrderStatusLabel(order.status)}
-                        tone={getStatusTone(order.status)}
-                      />
-                    </View>
 
-                    <Text style={[styles.packageLabel, { color: colors.text }]}>
-                      {summary.packageLabel}
-                    </Text>
-                    <Text style={[styles.subtle, { color: colors.textDim }]}>
-                      {summary.serviceLabel}
-                    </Text>
-
-                    {categories.length > 0 ? (
-                      <View style={styles.tagRow}>
-                        {categories.map((category) => (
-                          <Badge key={category} label={category} tone="neutral" />
-                        ))}
-                      </View>
-                    ) : null}
-
-                    <Text style={[styles.subtle, { color: colors.textSoft }]}>
-                      Updated {formatDateTime(order.updatedAt)}
-                    </Text>
-
-                    <View style={styles.documentSection}>
-                      <Text style={[styles.sectionLabel, { color: colors.textDim }]}>
-                        Documents
+                      <Text style={[styles.packageLabel, { color: colors.text }]}>
+                        {summary.packageLabel}
                       </Text>
-                      {order.serviceDocuments?.length ? (
-                        order.serviceDocuments.map((document) => {
-                          if (!document) {
-                            return null;
-                          }
+                      <Text style={[styles.subtle, { color: colors.textDim }]}>
+                        {summary.serviceLabel}
+                      </Text>
 
-                          const fileName = resolveDocumentFileName({
-                            title: document.description,
-                            attachment: document.attachment,
-                            fallback: `document-${document.id}.pdf`,
-                          });
+                      {categories.length > 0 ? (
+                        <View style={styles.tagRow}>
+                          {categories.map((category) => (
+                            <Badge key={category} label={category} tone="neutral" />
+                          ))}
+                        </View>
+                      ) : null}
 
-                          return (
-                            <View
-                              key={document.id}
-                              style={[
-                                styles.documentRow,
-                                compact && styles.documentRowStack,
-                                {
-                                  borderTopColor: colors.border,
-                                },
-                              ]}
-                            >
-                              <View style={styles.copy}>
-                                <Text style={[styles.value, { color: colors.text }]}>
-                                  {document.description}
-                                </Text>
-                                <Text style={[styles.subtle, { color: colors.textDim }]}>
-                                  {document.uploadedBy} | {formatDateTime(document.createdAt)}
-                                </Text>
-                              </View>
-                              <View style={styles.iconRow}>
-                                <IconButton
-                                  onPress={() => {
-                                    void openDocumentPreview(
-                                      config,
-                                      document.attachment,
-                                      fileName,
-                                    ).catch((error) => {
-                                      Alert.alert(
-                                        "Preview failed",
-                                        error instanceof Error
-                                          ? error.message
-                                          : "Could not open document.",
-                                      );
-                                    });
-                                  }}
-                                >
-                                  <Ionicons color={colors.text} name="eye-outline" size={18} />
-                                </IconButton>
-                                <IconButton
-                                  onPress={() => {
-                                    void downloadDocument(
-                                      config,
-                                      document.attachment,
-                                      fileName,
-                                    ).catch((error) => {
-                                      Alert.alert(
-                                        "Download failed",
-                                        error instanceof Error
-                                          ? error.message
-                                          : "Could not download document.",
-                                      );
-                                    });
-                                  }}
-                                >
-                                  <Ionicons
-                                    color={colors.text}
-                                    name="download-outline"
-                                    size={18}
-                                  />
-                                </IconButton>
-                              </View>
-                            </View>
-                          );
-                        })
-                      ) : (
-                        <Text style={[styles.subtle, { color: colors.textSoft }]}>
-                          No documents uploaded yet.
-                        </Text>
-                      )}
-                    </View>
+                      <Text style={[styles.subtle, { color: colors.textSoft }]}>
+                        Updated {formatDateTime(order.updatedAt)}
+                      </Text>
+                    </Pressable>
                   </Surface>
                 );
               })
@@ -376,14 +306,27 @@ export function StatusBoardScreen() {
           </View>
         ) : null}
       </View>
+      {activeOrder ? (
+        <StatusActionModal
+          currentStatus={status}
+          onClose={() => setActiveOrder(null)}
+          onSubmitted={async () => {
+            await resource.reload("refresh");
+          }}
+          order={activeOrder}
+        />
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  screenContent: {
+    paddingTop: 0,
+  },
   stack: {
     gap: 14,
-    marginTop: 8,
+    marginTop: 0,
   },
   summary: {
     fontSize: 13,
@@ -406,6 +349,12 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: 14,
+  },
+  summaryPressable: {
+    gap: 14,
+  },
+  summaryPressableActive: {
+    opacity: 0.82,
   },
   rowBetween: {
     alignItems: "center",
@@ -430,6 +379,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  statusWrap: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  actionHint: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
   packageLabel: {
     fontSize: 15,
     fontWeight: "700",
@@ -441,34 +398,6 @@ const styles = StyleSheet.create({
   tagRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-  },
-  documentSection: {
-    gap: 8,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  documentRow: {
-    alignItems: "center",
-    borderTopWidth: 1,
-    flexDirection: "row",
-    gap: 12,
-    paddingTop: 10,
-  },
-  documentRowStack: {
-    alignItems: "flex-start",
-    flexDirection: "column",
-  },
-  value: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  iconRow: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
     gap: 8,
   },
   pagination: {

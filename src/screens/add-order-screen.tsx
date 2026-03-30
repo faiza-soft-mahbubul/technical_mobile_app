@@ -34,7 +34,6 @@ import {
 } from "@/utils/format";
 import { useAsyncResource } from "@/utils/use-async-resource";
 
-type CompanyMode = "existing" | "new";
 type OrderMode = "package" | "services";
 type PaymentCollectionStatus = "paid" | "partial_paid";
 type InitialDocumentRow = {
@@ -45,11 +44,6 @@ type InitialDocumentRow = {
   uploadedFileName: string;
   isUploading: boolean;
 };
-
-const companyModeOptions = [
-  { label: "Existing company", value: "existing" },
-  { label: "New company", value: "new" },
-] as const;
 
 const orderModeOptions = [
   { label: "Package", value: "package" },
@@ -77,7 +71,6 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
   const { width } = useWindowDimensions();
   const { config } = useAppConfig();
   const { executeAuthenticated } = useAuth();
-  const [companyMode, setCompanyMode] = useState<CompanyMode>("existing");
   const [orderMode, setOrderMode] = useState<OrderMode>("package");
   const [paymentStatus, setPaymentStatus] = useState<PaymentCollectionStatus>("paid");
   const [submitting, setSubmitting] = useState(false);
@@ -109,29 +102,45 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
   const formData = resource.data;
   const existingCompany =
     formData?.companies.find((item) => item.id === Number(selectedExistingCompanyId)) ?? null;
+  const isExistingCompanySelected = Boolean(existingCompany);
   const activeCountries = formData?.countries.filter((item) => item.isActive) ?? [];
   const selectedCountry = activeCountries.find((item) => item.id === Number(countryId)) ?? null;
   const stateOptions =
     (selectedCountry?.states ?? [])
       .filter((item): item is NonNullable<typeof item> => Boolean(item?.isActive))
       .map((item) => ({ id: item.id, name: item.name, fee: item.fee })) ?? [];
-  const packageOptions =
-    (formData?.packages ?? []).filter(
-      (item) => item.isActive && item.countryId === Number(countryId),
-    ) ?? [];
-  const serviceOptions =
-    (formData?.services ?? []).filter(
-      (item) => item.isActive && item.countryId === Number(countryId),
-    ) ?? [];
-  const selectedPackage = packageOptions.find((item) => item.id === Number(packageId)) ?? null;
-  const selectedServices =
-    orderMode === "services"
-      ? serviceOptions.filter((item) => selectedServiceIds.includes(item.id))
-      : [];
-  const packageIncludedServices =
-    (selectedPackage?.packageServices ?? [])
-      .map((item) => item?.service)
-      .filter((item): item is NonNullable<typeof item> => Boolean(item)) ?? [];
+  const packageOptions = useMemo(
+    () =>
+      (formData?.packages ?? []).filter(
+        (item) => item.isActive && item.countryId === Number(countryId),
+      ) ?? [],
+    [countryId, formData?.packages],
+  );
+  const serviceOptions = useMemo(
+    () =>
+      (formData?.services ?? []).filter(
+        (item) => item.isActive && item.countryId === Number(countryId),
+      ) ?? [],
+    [countryId, formData?.services],
+  );
+  const selectedPackage = useMemo(
+    () => packageOptions.find((item) => item.id === Number(packageId)) ?? null,
+    [packageId, packageOptions],
+  );
+  const selectedServices = useMemo(
+    () =>
+      orderMode === "services"
+        ? serviceOptions.filter((item) => selectedServiceIds.includes(item.id))
+        : [],
+    [orderMode, selectedServiceIds, serviceOptions],
+  );
+  const packageIncludedServices = useMemo(
+    () =>
+      (selectedPackage?.packageServices ?? [])
+        .map((item) => item?.service)
+        .filter((item): item is NonNullable<typeof item> => Boolean(item)) ?? [],
+    [selectedPackage],
+  );
   const packageIncludedServiceNames = packageIncludedServices.map((item) => item.name).join(", ");
   const documentServiceOptions = useMemo(() => {
     const merged = orderMode === "package" ? packageIncludedServices : selectedServices;
@@ -150,20 +159,44 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
     0,
   );
   const totalAmount = stateFee + (orderMode === "package" ? packagePrice : 0) + serviceTotal;
+  const normalizedCompanyInput = normalizeText(companyName).toLowerCase();
+  const companySuggestions = useMemo(() => {
+    if (!normalizedCompanyInput) {
+      return [];
+    }
+
+    return (formData?.companies ?? [])
+      .filter((item) =>
+        item.name.trim().toLowerCase().includes(normalizedCompanyInput),
+      )
+      .slice(0, 6);
+  }, [formData?.companies, normalizedCompanyInput]);
+  const showCompanySuggestions =
+    !isExistingCompanySelected &&
+    normalizedCompanyInput.length > 0 &&
+    companySuggestions.length > 0;
 
   useEffect(() => {
     const validServiceIds = new Set(documentServiceOptions.map((item) => String(item.id)));
 
-    setInitialDocuments((current) =>
-      current.map((row) =>
-        row.serviceId && !validServiceIds.has(row.serviceId)
-          ? {
-              ...row,
-              serviceId: "",
-            }
-          : row,
-      ),
-    );
+    setInitialDocuments((current) => {
+      let changed = false;
+
+      const nextRows = current.map((row) => {
+        if (row.serviceId && !validServiceIds.has(row.serviceId)) {
+          changed = true;
+
+          return {
+            ...row,
+            serviceId: "",
+          };
+        }
+
+        return row;
+      });
+
+      return changed ? nextRows : current;
+    });
   }, [documentServiceOptions]);
 
   const handleExistingCompanyChange = (companyIdValue: string) => {
@@ -174,6 +207,9 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
       return;
     }
 
+    setPackageId("");
+    setSelectedServiceIds([]);
+    setInitialDocuments([]);
     setCompanyName(company.name);
     setCompanyTypeId(String(company.companyTypeId));
     setCompanyServiceTypeId(String(company.serviceTypeId));
@@ -184,6 +220,32 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
     setEmail(company.user?.email ?? "");
     setPhone(company.user?.phone ?? "");
     setAddress(company.user?.address ?? "");
+  };
+
+  const handleCompanyNameChange = (value: string) => {
+    setCompanyName(value);
+
+    if (!existingCompany) {
+      return;
+    }
+
+    if (normalizeText(value).toLowerCase() === existingCompany.name.trim().toLowerCase()) {
+      return;
+    }
+
+    setSelectedExistingCompanyId("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setAddress("");
+    setCountryId("");
+    setStateId("");
+    setCompanyTypeId("");
+    setCompanyServiceTypeId("");
+    setPackageId("");
+    setSelectedServiceIds([]);
+    setInitialDocuments([]);
   };
 
   const toggleService = (serviceId: number) => {
@@ -279,11 +341,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
   };
 
   const validate = () => {
-    if (companyMode === "existing" && !selectedExistingCompanyId) {
-      return "Choose an existing company.";
-    }
-
-    if (companyMode === "new") {
+    if (!existingCompany) {
       const requiredFields = [
         firstName,
         lastName,
@@ -500,50 +558,54 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
   return (
     <Screen>
       <View style={styles.stack}>
-        <SegmentedControl options={companyModeOptions} value={companyMode} onChange={setCompanyMode} />
-
         <Surface style={styles.card}>
           <Text style={[styles.sectionEyebrow, { color: colors.textSoft }]}>Company</Text>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Company</Text>
-          {companyMode === "existing" ? (
-            <PickerField
-              label="Existing company"
-              selectedValue={selectedExistingCompanyId}
-              options={[
-                { label: "Choose company", value: "" },
-                ...(formData?.companies.map((item) => ({
-                  label: item.name,
-                  value: String(item.id),
-                })) ?? []),
-              ]}
-              onValueChange={handleExistingCompanyChange}
-            />
-          ) : null}
-
           <TextField
-            editable={companyMode === "new"}
-            label="Company name"
+            label="Company"
+            placeholder="Search or type company name"
             value={companyName}
-            onChangeText={setCompanyName}
+            onChangeText={handleCompanyNameChange}
           />
+          {showCompanySuggestions ? (
+            <View style={[styles.suggestionPanel, { backgroundColor: colors.cardMuted }]}>
+              {companySuggestions.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => handleExistingCompanyChange(String(item.id))}
+                  style={({ pressed }) => [
+                    styles.suggestionRow,
+                    pressed ? styles.suggestionRowPressed : null,
+                  ]}
+                >
+                  <Text numberOfLines={1} style={[styles.suggestionTitle, { color: colors.text }]}>
+                    {item.name}
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.suggestionMeta, { color: colors.textSoft }]}>
+                    {item.user?.email ?? "Existing company"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <View style={[styles.row, stackedFields && styles.rowStack]}>
             <TextField
               containerStyle={[styles.rowField, stackedFields && styles.rowFieldStack]}
-              editable={companyMode === "new"}
+              editable={!isExistingCompanySelected}
               label="First name"
               value={firstName}
               onChangeText={setFirstName}
             />
             <TextField
               containerStyle={[styles.rowField, stackedFields && styles.rowFieldStack]}
-              editable={companyMode === "new"}
+              editable={!isExistingCompanySelected}
               label="Last name"
               value={lastName}
               onChangeText={setLastName}
             />
           </View>
           <TextField
-            editable={companyMode === "new"}
+            editable={!isExistingCompanySelected}
             autoCapitalize="none"
             keyboardType="email-address"
             label="Email"
@@ -553,7 +615,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
           <View style={[styles.row, stackedFields && styles.rowStack]}>
             <TextField
               containerStyle={[styles.rowField, stackedFields && styles.rowFieldStack]}
-              editable={companyMode === "new"}
+              editable={!isExistingCompanySelected}
               keyboardType="phone-pad"
               label="Phone"
               value={phone}
@@ -561,14 +623,14 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
             />
             <TextField
               containerStyle={[styles.rowField, stackedFields && styles.rowFieldStack]}
-              editable={companyMode === "new"}
+              editable={!isExistingCompanySelected}
               label="Address"
               value={address}
               onChangeText={setAddress}
             />
           </View>
           <PickerField
-            enabled={companyMode === "new"}
+            enabled={!isExistingCompanySelected}
             label="Country"
             selectedValue={countryId}
             options={[
@@ -585,7 +647,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
           <View style={[styles.row, stackedFields && styles.rowStack]}>
             <PickerField
               containerStyle={[styles.rowField, stackedFields && styles.rowFieldStack]}
-              enabled={companyMode === "new"}
+              enabled={!isExistingCompanySelected}
               label="State"
               selectedValue={stateId}
               options={[
@@ -599,7 +661,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
             />
             <PickerField
               containerStyle={[styles.rowField, stackedFields && styles.rowFieldStack]}
-              enabled={companyMode === "new"}
+              enabled={!isExistingCompanySelected}
               label="Company type"
               selectedValue={companyTypeId}
               options={[
@@ -613,7 +675,7 @@ export function AddOrderScreen({ navigation }: RootStackScreenProps<"AddOrder">)
             />
           </View>
           <PickerField
-            enabled={companyMode === "new"}
+            enabled={!isExistingCompanySelected}
             label="Service type"
             selectedValue={companyServiceTypeId}
             options={[
@@ -837,6 +899,28 @@ const styles = StyleSheet.create({
   helper: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  suggestionPanel: {
+    borderRadius: 8,
+    gap: 2,
+    padding: 4,
+  },
+  suggestionRow: {
+    borderRadius: 8,
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  suggestionRowPressed: {
+    opacity: 0.8,
+  },
+  suggestionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  suggestionMeta: {
+    fontSize: 11,
+    fontWeight: "500",
   },
   infoPanel: {
     borderRadius: 8,

@@ -10,7 +10,6 @@ import { AddOrderScreen } from "@/screens/add-order-screen";
 import { CompanyDetailScreen } from "@/screens/company-detail-screen";
 import { CompaniesScreen } from "@/screens/companies-screen";
 import { LoginScreen } from "@/screens/login-screen";
-import { OrdersScreen } from "@/screens/orders-screen";
 import { OverviewScreen } from "@/screens/overview-screen";
 import { RecentActivityScreen } from "@/screens/recent-activity-screen";
 import { SettingsScreen } from "@/screens/settings-screen";
@@ -53,8 +52,6 @@ function AddOrderHeaderButton({
 }
 
 function MainTabsNavigator() {
-  const { colors } = useAppTheme();
-
   return (
     <Tabs.Navigator
       screenOptions={({ navigation, route }) => ({
@@ -84,7 +81,6 @@ function MainTabsNavigator() {
         },
         headerRight:
           route.name === "Overview" ||
-          route.name === "Orders" ||
           route.name === "Companies"
             ? () => (
                 <AddOrderHeaderButton
@@ -95,7 +91,6 @@ function MainTabsNavigator() {
         tabBarIcon: ({ color, size, focused }) => {
           const iconName: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
             Overview: focused ? "grid" : "grid-outline",
-            Orders: focused ? "receipt" : "receipt-outline",
             Status: focused ? "albums" : "albums-outline",
             Companies: focused ? "business" : "business-outline",
             Activity: focused ? "pulse" : "pulse-outline",
@@ -109,30 +104,37 @@ function MainTabsNavigator() {
         },
       })}
     >
-      <Tabs.Screen name="Overview" component={OverviewScreen} />
-      <Tabs.Screen name="Orders" component={OrdersScreen} />
+      <Tabs.Screen
+        name="Overview"
+        component={OverviewScreen}
+        options={{ tabBarLabel: "Home" }}
+      />
       <Tabs.Screen
         name="Status"
         component={StatusBoardScreen}
-        options={{ title: "Status Board" }}
+        options={{ title: "Status", tabBarLabel: "Status" }}
       />
       <Tabs.Screen
         name="Companies"
         component={CompaniesScreen}
-        options={{ title: "All Companies" }}
+        options={{ title: "All Companies", tabBarLabel: "Firms" }}
       />
       <Tabs.Screen
         name="Activity"
         component={RecentActivityScreen}
-        options={{ title: "Recent Activity" }}
+        options={{ title: "Recent Activity", tabBarLabel: "Feed" }}
       />
-      <Tabs.Screen name="Settings" component={SettingsScreen} />
+      <Tabs.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ tabBarLabel: "More" }}
+      />
     </Tabs.Navigator>
   );
 }
 
 export function AppNavigator() {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const { isBootstrapping, isSignedIn } = useAuth();
 
   if (isBootstrapping) {
@@ -143,18 +145,18 @@ export function AppNavigator() {
     <Stack.Navigator
       screenOptions={{
         contentStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: "#020817",
         },
         headerStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: "#071427",
         },
         headerShadowVisible: false,
         headerTitleStyle: {
-          color: colors.text,
+          color: "#f8fbff",
           fontSize: 18,
           fontWeight: "700",
         },
-        headerTintColor: colors.text,
+        headerTintColor: "#dceafc",
       }}
     >
       {!isSignedIn ? (

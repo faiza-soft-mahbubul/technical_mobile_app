@@ -3,13 +3,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type PropsWithChildren,
 } from "react";
-import { useColorScheme } from "react-native";
-import { darkTheme, lightTheme, type ThemeMode } from "./tokens";
+import { darkTheme, type ThemeMode } from "./tokens";
 
 const THEME_STORAGE_KEY = "mas_mobile_theme_mode";
 
@@ -22,55 +20,24 @@ type ThemeContextValue = (typeof darkTheme) & {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const systemScheme = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>("system");
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    AsyncStorage.getItem(THEME_STORAGE_KEY)
-      .then((storedValue) => {
-        if (!isMounted) {
-          return;
-        }
-
-        if (storedValue === "light" || storedValue === "dark" || storedValue === "system") {
-          setModeState(storedValue);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsReady(true);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const [mode, setModeState] = useState<ThemeMode>("dark");
+  const [isReady] = useState(true);
 
   const setMode = useCallback(async (nextMode: ThemeMode) => {
-    setModeState(nextMode);
-    await AsyncStorage.setItem(THEME_STORAGE_KEY, nextMode);
+    setModeState("dark");
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, "dark");
   }, []);
 
-  const resolvedTheme = mode === "system"
-    ? systemScheme === "dark"
-      ? darkTheme
-      : lightTheme
-    : mode === "dark"
-      ? darkTheme
-      : lightTheme;
+  const resolvedTheme = darkTheme;
 
   const value = useMemo<ThemeContextValue>(
     () => ({
       ...resolvedTheme,
-      mode,
+      mode: "dark",
       setMode,
       isReady,
     }),
-    [isReady, mode, resolvedTheme, setMode],
+    [isReady, resolvedTheme, setMode],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

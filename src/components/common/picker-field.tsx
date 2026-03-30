@@ -1,5 +1,15 @@
-import { Picker } from "@react-native-picker/picker";
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { useAppTheme } from "@/theme/theme-provider";
 
 type PickerOption = {
@@ -24,46 +34,106 @@ export function PickerField({
   options,
   onValueChange,
   enabled = true,
+  prompt,
 }: PickerFieldProps) {
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
+  const [open, setOpen] = useState(false);
+
+  const selectedLabel = useMemo(() => {
+    return options.find((option) => option.value === selectedValue)?.label ?? "";
+  }, [options, selectedValue]);
 
   return (
     <View style={[styles.wrapper, containerStyle]}>
       {label ? <Text style={[styles.label, { color: colors.textDim }]}>{label}</Text> : null}
-      <View
-        style={[
-          styles.container,
+      <Pressable
+        disabled={!enabled}
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [
+          styles.trigger,
           {
             backgroundColor: colors.cardMuted,
-            borderColor: "transparent",
-            opacity: enabled ? 1 : 0.6,
+            opacity: enabled ? (pressed ? 0.92 : 1) : 0.58,
           },
         ]}
       >
-        <Picker
-          enabled={enabled}
-          dropdownIconColor={colors.textSoft}
-          selectedValue={selectedValue}
+        <Text
+          numberOfLines={1}
           style={[
-            styles.picker,
+            styles.triggerLabel,
             {
-              color: colors.text,
+              color: selectedLabel ? colors.text : colors.textSoft,
             },
           ]}
-          itemStyle={{
-            color: isDark ? "#ffffff" : "#0f172a",
-          }}
-          onValueChange={(value) => onValueChange(String(value))}
         >
-          {options.map((option) => (
-            <Picker.Item
-              key={`${option.label}-${option.value}`}
-              label={option.label}
-              value={option.value}
-            />
-          ))}
-        </Picker>
-      </View>
+          {selectedLabel || prompt || "Choose option"}
+        </Text>
+        <Ionicons color={colors.textSoft} name="chevron-down" size={18} />
+      </Pressable>
+
+      <Modal animationType="fade" transparent visible={open} onRequestClose={() => setOpen(false)}>
+        <Pressable
+          onPress={() => setOpen(false)}
+          style={[styles.overlay, { backgroundColor: "rgba(2, 8, 23, 0.62)" }]}
+        >
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            style={[styles.sheet, { backgroundColor: colors.backgroundSecondary }]}
+          >
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, { color: colors.text }]}>
+                {prompt || label || "Select option"}
+              </Text>
+              <Pressable
+                onPress={() => setOpen(false)}
+                style={({ pressed }) => [styles.closeButton, pressed ? styles.pressed : null]}
+              >
+                <Ionicons color={colors.textSoft} name="close" size={18} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.optionList}
+              showsVerticalScrollIndicator={false}
+            >
+              {options.map((option) => {
+                const selected = option.value === selectedValue;
+
+                return (
+                  <Pressable
+                    key={`${option.label}-${option.value}`}
+                    onPress={() => {
+                      onValueChange(option.value);
+                      setOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.option,
+                      {
+                        backgroundColor: selected ? colors.accent : colors.cardMuted,
+                      },
+                      pressed ? styles.pressed : null,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        {
+                          color: selected ? "#042321" : colors.text,
+                        },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {selected ? (
+                      <Ionicons color="#042321" name="checkmark" size={18} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -79,12 +149,65 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
-  container: {
+  trigger: {
+    alignItems: "center",
     borderRadius: 8,
-    borderWidth: 0,
-    overflow: "hidden",
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+    minHeight: 48,
+    paddingHorizontal: 14,
   },
-  picker: {
+  triggerLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+  sheet: {
+    borderRadius: 8,
+    maxHeight: "72%",
+    padding: 14,
+  },
+  sheetHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  closeButton: {
+    alignItems: "center",
+    borderRadius: 8,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  optionList: {
+    gap: 8,
+  },
+  option: {
+    alignItems: "center",
+    borderRadius: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 46,
+    paddingHorizontal: 14,
+  },
+  optionLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  pressed: {
+    opacity: 0.88,
   },
 });

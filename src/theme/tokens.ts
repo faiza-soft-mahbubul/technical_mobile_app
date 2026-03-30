@@ -30,12 +30,12 @@ export type AppTheme = {
 
 const common = {
   accent: "#19c4bb",
-  accentMuted: "#e7fffb",
-  accentStrong: "#0d8c85",
-  danger: "#ef6a6a",
+  accentMuted: "#10393d",
+  accentStrong: "#11a7b0",
+  danger: "#ff8f8f",
   ring: "rgba(25, 196, 187, 0.18)",
-  success: "#22a86f",
-  warning: "#d7962a",
+  success: "#38c27b",
+  warning: "#f3b13f",
 };
 
 export const lightTheme: AppTheme = {
@@ -88,25 +88,25 @@ export const darkTheme: AppTheme = {
   isDark: true,
   colors: {
     ...common,
-    background: "#06111f",
-    backgroundSecondary: "#0b1728",
-    border: "#18324a",
-    card: "#0c1a2d",
-    cardMuted: "#12233a",
-    muted: "#10213a",
-    shadow: "rgba(2, 8, 23, 0.4)",
+    background: "#020817",
+    backgroundSecondary: "#071427",
+    border: "rgba(176, 204, 255, 0.08)",
+    card: "rgba(8, 23, 41, 0.72)",
+    cardMuted: "rgba(255, 255, 255, 0.06)",
+    muted: "rgba(255, 255, 255, 0.04)",
+    shadow: "rgba(2, 8, 23, 0.42)",
     text: "#f8fbff",
-    textDim: "#a8bacf",
-    textSoft: "#7d93aa",
+    textDim: "#c8d7ea",
+    textSoft: "rgba(220, 234, 252, 0.48)",
   },
   navigationTheme: {
     dark: true,
     colors: {
       primary: common.accent,
-      background: "#06111f",
-      card: "#0c1a2d",
+      background: "#020817",
+      card: "#071427",
       text: "#f8fbff",
-      border: "#18324a",
+      border: "rgba(176, 204, 255, 0.08)",
       notification: common.accent,
     },
     fonts: {
