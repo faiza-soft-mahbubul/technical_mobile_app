@@ -10,6 +10,8 @@ import { Platform } from "react-native";
 export type AppConfig = {
   graphqlApiUrl: string;
   webAppUrl: string;
+  cloudinaryCloudName: string;
+  cloudinaryUploadPreset: string;
 };
 
 type AppConfigContextValue = {
@@ -76,14 +78,32 @@ function resolveDeviceReachableUrl(value?: string | null) {
   }
 }
 
-function readExtraValue(key: "graphqlApiUrl" | "webAppUrl") {
+function readExtraValue(
+  key:
+    | "graphqlApiUrl"
+    | "webAppUrl"
+    | "cloudinaryCloudName"
+    | "cloudinaryUploadPreset",
+) {
   const value = Constants.expoConfig?.extra?.[key];
   if (typeof value === "string" && value.trim()) {
+    if (key === "cloudinaryCloudName" || key === "cloudinaryUploadPreset") {
+      return value.trim();
+    }
+
     return resolveDeviceReachableUrl(value);
   }
 
   if (key === "graphqlApiUrl") {
     return resolveDeviceReachableUrl(process.env.EXPO_PUBLIC_GRAPHQL_API_URL);
+  }
+
+  if (key === "cloudinaryCloudName") {
+    return process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim() ?? "";
+  }
+
+  if (key === "cloudinaryUploadPreset") {
+    return process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET?.trim() ?? "";
   }
 
   return resolveDeviceReachableUrl(process.env.EXPO_PUBLIC_WEB_APP_URL) || "http://localhost:3000";
@@ -97,6 +117,8 @@ export function AppConfigProvider({ children }: PropsWithChildren) {
       config: {
         graphqlApiUrl: readExtraValue("graphqlApiUrl"),
         webAppUrl: readExtraValue("webAppUrl"),
+        cloudinaryCloudName: readExtraValue("cloudinaryCloudName"),
+        cloudinaryUploadPreset: readExtraValue("cloudinaryUploadPreset"),
       },
       isReady: true,
     }),

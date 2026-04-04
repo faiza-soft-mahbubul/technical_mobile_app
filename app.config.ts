@@ -45,6 +45,8 @@ const webAppUrl =
   rootEnv.NEXT_PUBLIC_WEB_APP_URL?.trim() ||
   rootEnv.NEXT_PUBLIC_APP_URL?.trim() ||
   "http://localhost:3000";
+const cloudinaryCloudName = rootEnv.CLOUDINARY_CLOUD_NAME?.trim() ?? "";
+const cloudinaryUploadPreset = rootEnv.CLOUDINARY_UPLOAD_PRESET?.trim() ?? "";
 
 const config: ExpoConfig = {
   name: "MAS Technical Mobile",
@@ -78,6 +80,8 @@ const config: ExpoConfig = {
   extra: {
     graphqlApiUrl,
     webAppUrl,
+    cloudinaryCloudName,
+    cloudinaryUploadPreset,
   },
 };
 

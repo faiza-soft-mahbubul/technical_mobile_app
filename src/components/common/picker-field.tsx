@@ -21,7 +21,7 @@ type PickerFieldProps = {
   containerStyle?: StyleProp<ViewStyle>;
   label?: string;
   selectedValue: string;
-  options: PickerOption[];
+  options: readonly PickerOption[];
   onValueChange: (value: string) => void;
   enabled?: boolean;
   prompt?: string;

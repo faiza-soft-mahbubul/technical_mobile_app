@@ -429,6 +429,8 @@ export function StatusActionModal({
       try {
         const uploadResult = await uploadDocumentToCloudinary({
           asset,
+          cloudinaryCloudName: config.cloudinaryCloudName,
+          cloudinaryUploadPreset: config.cloudinaryUploadPreset,
           webAppUrl: config.webAppUrl,
         });
 
