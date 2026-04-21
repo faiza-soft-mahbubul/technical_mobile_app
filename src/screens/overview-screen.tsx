@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+  COMPANY_ACCOUNTS_QUERY,
   OVERVIEW_ORDERS_BY_MONTH_QUERY,
   OVERVIEW_PACKAGE_DISTRIBUTION_QUERY,
   OVERVIEW_STATS_QUERY,
@@ -20,6 +21,7 @@ import type {
   MonthlyOrderPoint,
   OverviewRange,
   OverviewStats,
+  CompanyAccount,
   PackageDistributionPoint,
   RecentActivityItem,
 } from "@/api/types";
@@ -59,9 +61,16 @@ const rangeOptions = [
 type OverviewBundle = {
   activities: RecentActivityItem[];
   monthlyPoints: MonthlyOrderPoint[];
+  partialPayments: number;
   packageDistribution: PackageDistributionPoint[];
   stats: OverviewStats;
   totalPackageOrders: number;
+};
+
+type CompanyAccountsResponse = {
+  companyAccounts: {
+    items: CompanyAccount[];
+  };
 };
 
 function getLaneTone(label: string) {
@@ -99,6 +108,7 @@ function getStatCardTone(accent: string) {
     return {
       backgroundColor: "#4b3310",
       labelColor: "#ffe3b2",
+      valueColor: PALETTE.text,
     };
   }
 
@@ -106,6 +116,7 @@ function getStatCardTone(accent: string) {
     return {
       backgroundColor: "#15395f",
       labelColor: "#d5e9ff",
+      valueColor: PALETTE.text,
     };
   }
 
@@ -113,13 +124,104 @@ function getStatCardTone(accent: string) {
     return {
       backgroundColor: "#123b25",
       labelColor: "#d8ffe8",
+      valueColor: PALETTE.text,
+    };
+  }
+
+  if (accent === PALETTE.danger) {
+    return {
+      backgroundColor: "#4a1f28",
+      labelColor: "#ffd7de",
+      valueColor: "#ffadb9",
     };
   }
 
   return {
     backgroundColor: "#0f3f44",
     labelColor: "#d8fffd",
+    valueColor: PALETTE.text,
   };
+}
+
+function startOfDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function endOfDay(value: Date) {
+  return new Date(
+    value.getFullYear(),
+    value.getMonth(),
+    value.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+}
+
+function startOfMonth(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), 1);
+}
+
+function endOfMonth(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
+function buildRangeWindow(range: OverviewRange, referenceDate: Date) {
+  if (range === "TODAY") {
+    return {
+      start: startOfDay(referenceDate),
+      end: endOfDay(referenceDate),
+    };
+  }
+
+  if (range === "YESTERDAY") {
+    const previousDate = new Date(referenceDate);
+    previousDate.setDate(previousDate.getDate() - 1);
+
+    return {
+      start: startOfDay(previousDate),
+      end: endOfDay(previousDate),
+    };
+  }
+
+  if (range === "LAST_7_DAYS") {
+    const start = startOfDay(referenceDate);
+    start.setDate(start.getDate() - 6);
+
+    return {
+      start,
+      end: endOfDay(referenceDate),
+    };
+  }
+
+  if (range === "LAST_MONTH") {
+    const previousMonth = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth() - 1,
+      1,
+    );
+
+    return {
+      start: startOfMonth(previousMonth),
+      end: endOfMonth(previousMonth),
+    };
+  }
+
+  return {
+    start: startOfMonth(referenceDate),
+    end: endOfDay(referenceDate),
+  };
+}
+
+function isDateWithinRange(value: string, rangeWindow: { start: Date; end: Date }) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  return parsed.getTime() >= rangeWindow.start.getTime() && parsed.getTime() <= rangeWindow.end.getTime();
 }
 
 export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
@@ -127,6 +229,7 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
   const { executeAuthenticated } = useAuth();
   const [range, setRange] = useState<OverviewRange>("THIS_MONTH");
   const compact = width < 390;
+  const statCardWidth = width >= 720 ? "31.8%" : "48.5%";
 
   const referenceDate = useMemo(() => {
     const today = new Date();
@@ -144,8 +247,10 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
     async () => {
       const year = referenceDate.getFullYear();
       const month = referenceDate.getMonth() + 1;
+      const rangeWindow = buildRangeWindow(range, referenceDate);
 
-      const [statsData, monthlyData, packageData, activityData] = await Promise.all([
+      const [statsData, monthlyData, packageData, activityData, companyAccountsData] =
+        await Promise.all([
         executeAuthenticated<{ overviewStats: OverviewStats }, { input: { range: OverviewRange } }>(
           OVERVIEW_STATS_QUERY,
           {
@@ -192,11 +297,32 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
             pageSize: 4,
           },
         }),
+        executeAuthenticated<
+          CompanyAccountsResponse,
+          { input: { page: number; pageSize: number } }
+        >(COMPANY_ACCOUNTS_QUERY, {
+          input: {
+            page: 1,
+            pageSize: 500,
+          },
+        }),
       ]);
+
+      const partialPayments = companyAccountsData.companyAccounts.items.reduce(
+        (count, company) =>
+          count +
+          company.payments.filter(
+            (payment) =>
+              payment.status === "PARTIALLY_PAID" &&
+              isDateWithinRange(payment.latestActivityAt, rangeWindow),
+          ).length,
+        0,
+      );
 
       return {
         activities: activityData.recentActivities.items,
         monthlyPoints: monthlyData.overviewOrdersByMonth.items,
+        partialPayments,
         packageDistribution: packageData.overviewPackageDistribution.items,
         stats: statsData.overviewStats,
         totalPackageOrders: packageData.overviewPackageDistribution.totalOrders,
@@ -226,6 +352,21 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
           accent: PALETTE.success,
           label: "Done",
           value: resource.data.stats.completedOrders,
+        },
+        {
+          accent: PALETTE.accent,
+          label: "Total Payments",
+          value: "$48,300",
+        },
+        {
+          accent: PALETTE.accent,
+          label: "Total Partial Payment",
+          value: resource.data.partialPayments,
+        },
+        {
+          accent: PALETTE.danger,
+          label: "Total Due",
+          value: "$12,500",
         },
       ]
     : [];
@@ -302,15 +443,26 @@ export function OverviewScreen({ navigation }: MainTabScreenProps<"Overview">) {
                       const tone = getStatCardTone(item.accent);
 
                       return (
-                      <View
-                        key={item.label}
-                        style={[styles.statCard, { backgroundColor: tone.backgroundColor }]}
-                      >
-                        <Text numberOfLines={2} style={[styles.statLabel, { color: tone.labelColor }]}>
-                          {item.label}
-                        </Text>
-                        <Text style={styles.statValue}>{item.value}</Text>
-                      </View>
+                        <View
+                          key={item.label}
+                          style={[
+                            styles.statCard,
+                            {
+                              backgroundColor: tone.backgroundColor,
+                              width: statCardWidth,
+                            },
+                          ]}
+                        >
+                          <Text
+                            numberOfLines={2}
+                            style={[styles.statLabel, { color: tone.labelColor }]}
+                          >
+                            {item.label}
+                          </Text>
+                          <Text style={[styles.statValue, { color: tone.valueColor }]}>
+                            {item.value}
+                          </Text>
+                        </View>
                       );
                     })}
                   </View>
@@ -532,13 +684,14 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 6,
+    justifyContent: "space-between",
   },
   statCard: {
     borderRadius: 8,
-    flex: 1,
     gap: 4,
-    minHeight: 66,
+    minHeight: 72,
     overflow: "hidden",
     paddingHorizontal: 7,
     paddingVertical: 7,
@@ -556,7 +709,6 @@ const styles = StyleSheet.create({
     lineHeight: 11,
   },
   statValue: {
-    color: PALETTE.text,
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: -1,

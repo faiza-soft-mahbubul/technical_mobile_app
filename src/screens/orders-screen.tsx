@@ -13,7 +13,7 @@ import { Surface } from "@/components/common/surface";
 import { useAuth } from "@/providers/auth-provider";
 import { useAppTheme } from "@/theme/theme-provider";
 import { formatCurrency, formatDateTime, formatShortDate } from "@/utils/format";
-import { buildOrderSummary, getStatusTone } from "@/utils/orders";
+import { buildOrderFinancialSummary, buildOrderSummary, getStatusTone } from "@/utils/orders";
 import { useAsyncResource } from "@/utils/use-async-resource";
 
 const statusOptions = [
@@ -104,6 +104,7 @@ export function OrdersScreen() {
             ) : (
               pageData.items.map((order) => {
                 const summary = buildOrderSummary(order);
+                const financialSummary = buildOrderFinancialSummary(order);
                 const clientName = [
                   order.companyInfo?.user?.firstName,
                   order.companyInfo?.user?.lastName,
@@ -116,10 +117,10 @@ export function OrdersScreen() {
                     <View style={[styles.rowBetween, compact && styles.rowStack]}>
                       <View style={styles.copy}>
                         <Text style={[styles.orderNumber, { color: colors.text }]}>
-                          Order #{order.id}
+                          Invoice #{order.id}
                         </Text>
                         <Text style={[styles.companyName, { color: colors.textDim }]}>
-                          {order.companyInfo?.name ?? "Unknown company"}
+                          {formatDateTime(order.createdAt)}
                         </Text>
                       </View>
                       <Badge
@@ -128,43 +129,61 @@ export function OrdersScreen() {
                       />
                     </View>
 
-                    <View style={styles.detailBlock}>
-                      <Text style={[styles.label, { color: colors.textSoft }]}>
-                        Package / Service
-                      </Text>
-                      <Text style={[styles.value, { color: colors.text }]}>
-                        {summary.packageLabel}
-                      </Text>
-                      <Text style={[styles.subtle, { color: colors.textDim }]}>
-                        {summary.serviceLabel}
-                      </Text>
-                    </View>
-
                     <View style={[styles.infoGrid, compact && styles.infoGridStack]}>
                       <View style={styles.infoCell}>
-                        <Text style={[styles.label, { color: colors.textSoft }]}>Client</Text>
+                        <Text style={[styles.label, { color: colors.textSoft }]}>Company</Text>
+                        <Text style={[styles.value, { color: colors.text }]}>
+                          {order.companyInfo?.name ?? "Unknown company"}
+                        </Text>
+                        <Text style={[styles.subtle, { color: colors.textDim }]}>
+                          {order.companyInfo?.state?.name ?? "-"}
+                        </Text>
+                      </View>
+                      <View style={styles.infoCell}>
+                        <Text style={[styles.label, { color: colors.textSoft }]}>User</Text>
                         <Text style={[styles.value, { color: colors.text }]}>
                           {clientName || "No client name"}
                         </Text>
                         <Text style={[styles.subtle, { color: colors.textDim }]}>
                           {order.companyInfo?.user?.email ?? "-"}
                         </Text>
-                      </View>
-                      <View style={styles.infoCell}>
-                        <Text style={[styles.label, { color: colors.textSoft }]}>Amount</Text>
-                        <Text style={[styles.value, { color: colors.text }]}>
-                          {formatCurrency(order.price)}
-                        </Text>
                         <Text style={[styles.subtle, { color: colors.textDim }]}>
-                          State: {order.companyInfo?.state?.name ?? "-"}
+                          {order.companyInfo?.user?.phone ?? "-"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.detailBlock}>
+                      <Text style={[styles.label, { color: colors.textSoft }]}>Package</Text>
+                      <Text style={[styles.value, { color: colors.text }]}>
+                        {summary.packageLabel}
+                      </Text>
+                      <Text style={[styles.subtle, { color: colors.textDim }]}>
+                        {summary.serviceLabel}
+                      </Text>
+                      <View style={styles.moneyStack}>
+                        <Text style={[styles.subtle, styles.moneyLine, { color: colors.textDim }]}>
+                          Price: {formatCurrency(financialSummary.priceAmount)}
+                        </Text>
+                        <Text style={[styles.subtle, styles.moneyLine, { color: colors.textDim }]}>
+                          Pay: {formatCurrency(financialSummary.paidAmount)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.subtle,
+                            styles.moneyLine,
+                            { color: colors.danger },
+                          ]}
+                        >
+                          Due: {formatCurrency(financialSummary.dueAmount)}
                         </Text>
                       </View>
                     </View>
 
                     <View style={styles.timeline}>
-                      <Text style={[styles.label, { color: colors.textSoft }]}>Timeline</Text>
+                      <Text style={[styles.label, { color: colors.textSoft }]}>Invoice Date</Text>
                       <Text style={[styles.subtle, { color: colors.textDim }]}>
-                        Created {formatDateTime(order.createdAt)}
+                        {formatDateTime(order.createdAt)}
                       </Text>
                       <Text style={[styles.subtle, { color: colors.textDim }]}>
                         LLC {formatShortDate(order.llcSubmittedAt)} / {formatShortDate(order.llcReceivedAt)}
@@ -246,6 +265,13 @@ const styles = StyleSheet.create({
   },
   detailBlock: {
     gap: 4,
+  },
+  moneyStack: {
+    gap: 1,
+    marginTop: 2,
+  },
+  moneyLine: {
+    lineHeight: 17,
   },
   label: {
     fontSize: 11,

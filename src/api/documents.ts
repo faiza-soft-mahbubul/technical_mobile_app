@@ -40,6 +40,31 @@ export const DASHBOARD_PROFILE_QUERY = `
   }
 `;
 
+export const COMPANY_PROFILE_DETAILS_QUERY = `
+  query CompanyProfileDetails($companyId: Int!) {
+    company(companyId: $companyId) {
+      id
+      name
+      user {
+        id
+        firstName
+        lastName
+        email
+        phone
+        address
+        role
+        status
+      }
+      companyDetails {
+        id
+        ein
+        address
+        notificationEmail
+      }
+    }
+  }
+`;
+
 export const OVERVIEW_STATS_QUERY = `
   query OverviewStats($input: OverviewStatsInput) {
     overviewStats(input: $input) {
@@ -123,6 +148,12 @@ export const DASHBOARD_ORDERS_QUERY = `
                 name
               }
             }
+          }
+        }
+        paymentOrders {
+          payment {
+            amount
+            status
           }
         }
       }

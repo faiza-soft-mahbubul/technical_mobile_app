@@ -52,6 +52,27 @@ export type OverviewStats = {
   completedOrders: number;
 };
 
+export type CompanyProfileDetails = {
+  id: number;
+  name: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address?: string | null;
+    role: string;
+    status?: string | null;
+  } | null;
+  companyDetails?: {
+    id: number;
+    ein: string;
+    address: string;
+    notificationEmail: string;
+  } | null;
+};
+
 export type MonthlyOrderPoint = {
   month: number;
   monthLabel: string;
@@ -114,6 +135,12 @@ export type OrdersPageItem = {
           name: string;
         } | null;
       } | null> | null;
+    } | null;
+  } | null> | null;
+  paymentOrders?: Array<{
+    payment?: {
+      amount: string;
+      status: PaymentStatus;
     } | null;
   } | null> | null;
 };

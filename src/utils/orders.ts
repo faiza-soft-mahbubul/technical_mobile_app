@@ -1,5 +1,5 @@
 import type { OrderStatus, OrdersPageItem, StatusBoardOrder } from "@/api/types";
-import { uniqueValues } from "./format";
+import { parseMoney, uniqueValues } from "./format";
 
 export function getStatusTone(status: OrderStatus) {
   if (status === "PROCESSING") {
@@ -32,6 +32,29 @@ export function buildOrderSummary(order: OrdersPageItem | StatusBoardOrder) {
       : packageNames.length
         ? "No extra services"
         : "No services",
+  };
+}
+
+export function buildOrderFinancialSummary(order: OrdersPageItem) {
+  const priceAmount = parseMoney(order.price);
+  const paidAmount = (order.paymentOrders ?? []).reduce((total, paymentOrder) => {
+    const payment = paymentOrder?.payment;
+
+    if (!payment) {
+      return total;
+    }
+
+    if (payment.status === "PAID" || payment.status === "PARTIALLY_PAID") {
+      return total + parseMoney(payment.amount);
+    }
+
+    return total;
+  }, 0);
+
+  return {
+    priceAmount,
+    paidAmount,
+    dueAmount: Math.max(priceAmount - paidAmount, 0),
   };
 }
 
